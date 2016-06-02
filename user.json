@@ -1,0 +1,55 @@
+{
+  "edited_at": "2016-05-17T16:31:32.883360",
+  "last_name": "Musslewhite",
+  "primary_organization": {
+    "organization": "ahJzfnJlYWxtYXNzaXZlLXByb2RyGQsSDE9yZ2FuaXphdGlvbhiAgICgmPGACgw",
+    "role": "",
+    "title": ""
+  },
+  "photo": "https://d2ojpxxtu63wzl.cloudfront.net/static/9b168e01b42e5b709ce35b01b486987a_38938ea93dfadacb4a2679d07f2c5f042daee4ceabc173ca0d7c53f6d81e31de",
+  "ccim_number": "",
+  "tos_status": "ACCEPTED",
+  "id": "5667674143064064",
+  "location_url": "https://www.realmassive.com/profile/5667674143064064",
+  "first_name": "Michael",
+  "title": "",
+  "license_number": "",
+  "last_login": "",
+  "tos_version": "",
+  "company_size": "",
+  "markets": [],
+  "email": "michael.musslewhite@realmassive.com",
+  "bio": "",
+  "mobile_phone": "",
+  "company_role": "",
+  "company": "",
+  "login_count": "",
+  "atlas_subscriber": true,
+  "phone": "",
+  "is_admin": true,
+  "key": "ahJzfnJlYWxtYXNzaXZlLXByb2RyEQsSBFVzZXIYgICAwIPXiAoM",
+  "subscription": {
+    "status": "Valid",
+    "kind": "Business",
+    "provider_subscription": "",
+    "provider_account_id": ""
+  },
+  "organizations": [
+    "ahJzfnJlYWxtYXNzaXZlLXByb2RyGQsSDE9yZ2FuaXphdGlvbhiAgICgmPGACgw",
+    "ahJzfnJlYWxtYXNzaXZlLXByb2RyGQsSDE9yZ2FuaXphdGlvbhiAgIDjmL7wCgw"
+  ],
+  "secondary_email": "",
+  "email_verified": true,
+  "created_at": "2014-07-26T02:37:59.831720",
+  "social_links": "",
+  "auth_providers": [
+    "google",
+    "email"
+  ],
+  "sior_number": "",
+  "permissions": [
+    "Read",
+    "Create"
+  ],
+  "available_positions": []
+}
