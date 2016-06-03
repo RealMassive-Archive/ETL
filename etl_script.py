@@ -419,28 +419,6 @@ def load_space(new, space_info):
     })
 
 
-def load_space_lease(new, space_id, lease_info):
-    """ Create a new RealMassive lease on Space (indicated by space_id).
-    """
-    return new.spaces(space_id).leases.POST(json={
-        "data": {
-            "type": "leases",
-            "attributes": lease_info
-        }
-    })
-
-
-def load_space_sublease(new, space_id, sublease_info):
-    """ Create a new RealMassive sublease on Space (indicated by space_id).
-    """
-    return new.spaces(space_id).subleases.POST(json={
-        "data": {
-            "type": "subleases",
-            "attributes": sublease_info
-        }
-    })
-
-
 def load_team(new, team_info):
     """ Create a new Team with the specified name.
     """
@@ -540,6 +518,33 @@ def load_attachment(new, target_collection, target_id, media, precedence=0.0):
             }
         }
     })
+
+
+def load_listing(new, listing_type, listing_info):
+    """ Create a new RealMassive listing entity.
+
+        LeaseSchema
+        available_date = fields.Date()
+        rate = fields.Nested(RateSchema)
+        lease_term = fields.Nested(IntegerRangeSchema)
+        tenant_improvement = fields.String()
+
+        SubleaseSchema
+        rate = fields.Nested(RateSchema)
+        sublease_availability = fields.Nested(DateRangeSchema)
+    """
+    return new(listing_type).POST(json={
+        "data": {
+            "type": listing_type,
+            "attributes": listing_info
+        }
+    })
+
+
+def attach_listing(new, target_collection, target_id, listing_type, listing):
+    """ Create a new RealMassive lease on Space (indicated by space_id).
+    """
+    return new(target_collection)(target_id)(listing_type).POST(json=listing)
 
 
 #######################################################################
@@ -739,8 +744,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             }
             media = load_media(new, media_info)
             if not media:
-                continue
-            attachment = load_attachment(new, "contacts", contact["data"]["id"], media)
+                attachment = load_attachment(new, "contacts", contact["data"]["id"], media)
 
     # Load v2 Building assets
     old_building_asset_map = {}  # Map of old keystrings to new ids
@@ -752,14 +756,14 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         new_building = load_building(new, new_building)
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
         # TODO: permissions
+        # TODO: building listing?
         # Building attachments
         attachments = building.get("attachments", [])
         for i, old_attachment in enumerate(attachments):
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
-            if not media:
-                continue
-            attachment = load_attachment(new, "buildings", new_building["data"]["id"], media, precedence=float(i))
-            old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
+            if media:
+                attachment = load_attachment(new, "buildings", new_building["data"]["id"], media, precedence=float(i))
+                old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
 
     # Load v2 Space/lease assets
     old_space_asset_map = {}
@@ -781,17 +785,19 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             new_building_id = None
 
         # Create v2 listing
-        space_type = space.get("space_type")
-        if space_type == "lease":
-            listing = transform_space_lease(space)
-            load_space_lease(new, space_id, listing)
-        elif space_type == "sublease":
+        listing_type = space.get("space_type")
+        listing_type += "s"  # pluralize
+        if listing_type == "subleases":
             # TODO: subleases
             logging.warning("Skipping sublease listing for space: {}".format(space_id))
             continue
-        else:
-            logging.warning("Unknown space_type {} for space {}".format(space_type, space["key"]))
+        elif listing_type != "leases":
+            logging.warning("Unknown listing_type {} for space {}".format(listing_type, space["key"]))
             continue
+
+        listing_info = transform_space_lease(space)
+        listing = load_listing(new, listing_type, listing_info)
+        space_listing = attach_listing(new, "spaces", space_id, listing_type, listing)
 
         # Attach media to space
         # TODO: i think this should be listing
@@ -803,9 +809,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                 if building_attachments and old_attachment["key"] in building_attachments:
                     continue
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
-            if not media:
-                continue
-            attachment = load_attachment(new, "spaces", new_space["data"]["id"], media, precedence=float(i))
+            if media:
+                attachment = load_attachment(new, "spaces", new_space["data"]["id"], media, precedence=float(i))
 
 
 #####################################################################
