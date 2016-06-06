@@ -12,7 +12,7 @@ Currently supported:
   - git@github.com:RealMassive/apiv2.git@staging
 
 3) Build and run `upload` and `apiv2` servers (virtual environments recommended):
-  - For upload: `./deploy_local.sh`
+  - For upload: `./install.sh && dev_appserver --admin_port 8085 --port 8086 upload.yaml`
   - For apiv2: `pip install -r requirements.txt && python manage.py runserver`
 
 4) Run ETL script:
