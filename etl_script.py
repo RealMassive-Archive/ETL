@@ -723,7 +723,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         # Create v2 User
         load_user(new, user_info)
         # NOTE: load_user does not return user id. Need to GET
-        user = new.users.GET(params={"filter[email]": user_info["email"]})["data"][0]
+        user = new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]
         # Add User to Team
         team_member = load_team_member(new, team["data"]["id"], {"data": user})
 
