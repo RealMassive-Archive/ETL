@@ -731,6 +731,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         contact = load_contact(new, user_info)
         # Associate contact with user
         new.users(user["id"]).contacts.POST(json=contact)
+        # Associate contact with organization
+        new.organizations(organization["data"]["id"]).contacts.POST(json=contact)
         # Contact attachment
         photo = old_contact.get("photo")
         if photo and "default_profile" not in photo:
