@@ -4,6 +4,7 @@ import mimetypes
 
 import requests
 from requests.exceptions import HTTPError
+from retrying import retry
 
 
 def clean_up_shit_nulls(stuff, shit_nulls=None):
@@ -477,6 +478,12 @@ def load_organization(new, organization_info):
     })
 
 
+def load_organization_contact(new, organization_id, contact):
+    """ Add an organization_member to and organization.
+    """
+    return new.organizations(organization_id).contacts.POST(json=contact)
+
+
 def upload_media(media_service, filename, url):
     """ Upload media to new hosting service and return its metadata.
     """
@@ -554,18 +561,33 @@ def attach_listing(new, target_collection, target_id, listing_type, listing):
 from collections import defaultdict
 
 
+@retry
+def _single_api_call(partial_call, params=None):
+    return partial_call(params=params)
+
+
+def _multi_api_call(partial_call, params=None):
+    """ Return an entire API call by iterating over all the cursors.
+    """
+    results = []
+    if not params:
+        params = {}
+    call = _single_api_call(partial_call, params=params)
+    results.extend(call["results"])
+    while call.get("cursor"):
+        params.update({"cursor": call["cursor"]})
+        call = _single_api_call(partial_call, params=params)
+        results.extend(call["results"])
+    return results
+
+
 def get_all_organizations(old):
     """ Return a list of v1 organizations.
     """
     # Get keys first, since we can't do a GET on api/v1/organizations
-    organization_keys = []
     params = {"fields": "[key]"}
-    api_call = old.api.v1.organizations.search.GET(params=params)
-    organization_keys.extend([thing["key"] for thing in api_call["results"]])
-    while api_call.get("cursor"):
-        params.update({"cursor": api_call["cursor"]})
-        api_call = old.api.v1.organizations.search.GET(params=params)
-        organization_keys.extend([thing["key"] for thing in api_call["results"]])
+    results = _multi_api_call(old.api.v1.organizations.search.GET, params=params)
+    organization_keys = [thing["key"] for thing in results]
 
     # Use keys to do GETs on individual orgs
     organizations = []
@@ -597,15 +619,8 @@ def get_users_from_organization(old, organization_payload):
 def get_buildings_from_organization(old, organization_keystring):
     """ Return list of Buildings for a particular organization.
     """
-    buildings = []
     params = {"manager.key": organization_keystring}
-    api_call = old.api.v1.buildings.GET(params=params)
-    buildings.extend(api_call["results"])
-    while api_call.get("cursor"):
-        params.update({"cursor": api_call["cursor"]})
-        api_call = old.api.v1.buildings.GET(params=params)
-        buildings.extend(api_call["results"])
-    return buildings
+    return _multi_api_call(old.api.v1.buildings.GET, params=params)
 
 
 def get_spaces_from_organization(old, organization_keystring):
@@ -619,18 +634,8 @@ def get_spaces_from_organization(old, organization_keystring):
         "space_type": "lease"
     }
     # First get the space keystrings
-    api_call = old.api.v1.spaces.search.GET(params=params)
-    for result in api_call["results"]:
-        key = result.get("key")
-        if key:
-            space_keys.append(key)
-    while api_call.get("cursor"):
-        params.update({"cursor": api_call["cursor"]})
-        api_call = old.api.v1.spaces.search.GET(params=params)
-        for result in api_call["results"]:
-            key = result.get("key")
-            if key:
-                space_keys.append(key)
+    results = _multi_api_call(old.api.v1.spaces.search.GET, params=params)
+    space_keys = filter(None, [result.get("key") for result in results])
 
     # Now get each space individually
     spaces = []
@@ -646,18 +651,11 @@ def get_subleases_from_user(old, user):
 
         Only return Public.
     """
-    spaces = []
     params = {
         "space_type": "sublease",
         "status": "Public"
     }
-    api_call = old.api.v1.spaces.GET(params=params)
-    spaces.extend(api_call["results"])
-    while api_call.get("cursor"):
-        params.update({"cursor": api_call["cursor"]})
-        api_call = old.api.v1.spaces.GET(params=params)
-        spaces.extend(api_call["results"])
-    return spaces
+    return _multi_api_call(old.api.v1.spaces.GET, params=params)
 
 
 def get_new_media_for_old(old, new, media_service, keystring):
@@ -673,7 +671,7 @@ def get_new_media_for_old(old, new, media_service, keystring):
         return None
     filename = old_media["filename"]
     if not filename or "." not in filename:
-        # Invalid filename, which is not required in upload service
+        # Invalid filename, which is required in upload service
         mimetype = old_media["mime_type"]
         ext = mimetypes.guess_extension(mimetype)
         if ext:
@@ -741,8 +739,9 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             media_info = {
                 "filename": filename,
                 "ip_status": "APPROVED",
+                "mime_type": "image/png",
+                "url": upload_media(media_service, filename, photo),
                 "user_approved": True,
-                "url": upload_media(media_service, filename, photo)
             }
             media = load_media(new, media_info)
             if not media:
@@ -800,6 +799,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         listing_info = transform_space_lease(space)
         listing = load_listing(new, listing_type, listing_info)
         space_listing = attach_listing(new, "spaces", space_id, listing_type, listing)
+        # TODO: relate organization to listing
+        # TODO: relate contacts to listing
 
         # Attach media to space
         # TODO: i think this should be listing
@@ -814,96 +815,3 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             if media:
                 attachment = load_attachment(new, "spaces", new_space["data"]["id"], media, precedence=float(i))
 
-
-#####################################################################
-## TESTS
-######################################################################
-#
-#import json
-#
-#
-#building_info = json.load(open("./building.json", "r"))
-#transformed_building = clean_up_shit_nulls(transform_building_asset(building_info))
-#expected_building = {
-#    "address": {
-#        "city": u"Austin",
-#        "county": u"Travis County",
-#        "latitude": u"30.3967473",
-#        "longitude": u"-97.743585",
-#        "state": u"TX",
-#        "street": u"10401 Research Blvd",
-#        "zipcode": u"78759"
-#    },
-#    "build_status": u"existing",
-#    "building_size": {
-#        "units": "sf",
-#        "value": u"152938"
-#    },
-#    "building_type": u"retail",
-#    "title": u"10401 Research Blvd",
-#    "year_built": u"2001"
-#}
-#assert transformed_building == expected_building
-#
-#
-#space_info = json.load(open("./space.json", "r"))
-#transformed_space = transform_space_asset(space_info)
-#expected_space = {
-#    "space_size": {
-#        "units": "sqft",
-#        "value": "878"
-#    },
-#    "unit_number": "1050"
-#}
-#assert transformed_space == expected_space
-#
-#
-#transformed_space_lease = transform_space_lease(space_info)
-#expected_space_lease = {
-#    "rate": {
-#        "frequency": "yearly",
-#        "rate": {
-#            "units": "usd",
-#            "value": "38.0"
-#        },
-#        "type": "triple_net"
-#    }
-#}
-#assert transformed_space_lease == expected_space_lease
-#
-#
-#organization_info = json.load(open("./organization.json", "r"))
-#transformed_firm = transform_organization_organization(organization_info)
-#expected_firm = {
-#    "address": {
-#        "city": "Austin",
-#        "county": "Travis",
-#        "state": "TX",
-#        "street": "1703 W. 5th Street, Suite 850",
-#        "zipcode": "78703"
-#    },
-#    "bio": "This is a long ass bio for a firm",
-#    "name": "JLL Austin",
-#    "phone": "5122252700",
-#    "social": {
-#        "linkedin": "https://www.linkedin.com/company/jll",
-#        "twitter": "https://twitter.com/jll",
-#        "website": "http://www.jll.com/austin/en-us"
-#    }
-#}
-#assert transformed_firm == expected_firm
-#
-#
-#transformed_team = transform_organization_team(organization_info)
-#expected_team = {"name": "JLL Austin"}
-#assert transformed_team == expected_team
-#
-#
-#user_info = json.load(open("./user.json", "r"))
-#transformed_user = transform_user(user_info)
-#expected_user = {
-#    "email": "michael.musslewhite@realmassive.com",
-#    "first_name": "Michael",
-#    "last_name": "Musslewhite"
-#}
-#assert transformed_user == expected_user
