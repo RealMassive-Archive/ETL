@@ -84,6 +84,25 @@ def transform_media(media_info):
     return clean_up_shit_nulls(data)
 
 
+def _transform_social(social_info):
+    """ Transform v1 social_links to v2 social.
+
+        website = fields.String()
+        linkedin = fields.String()
+        twitter = fields.String()
+    """
+    data = {
+        "website": social_info.get("webpage"),
+        "linkedin": social_info.get("linkedin"),
+        "twitter": social_info.get("twitter")
+    }
+    return clean_up_shit_nulls(data)
+
+################################
+# Metadata resource transforms #
+################################
+
+
 def transform_attachment(media, precedence=0.0):
     """ Restructure a v2 Media resource into an attachment.
     """
@@ -110,21 +129,6 @@ def transform_team_member(team_member, membership="accepted"):
             }
         }
     }
-
-
-def _transform_social(social_info):
-    """ Transform v1 social_links to v2 social.
-
-        website = fields.String()
-        linkedin = fields.String()
-        twitter = fields.String()
-    """
-    data = {
-        "website": social_info.get("webpage"),
-        "linkedin": social_info.get("linkedin"),
-        "twitter": social_info.get("twitter")
-    }
-    return clean_up_shit_nulls(data)
 
 
 #######################################################################
@@ -437,46 +441,10 @@ def load_resource(new, resource_type, resource_attributes):
     })
 
 
-def load_building(new, building_info):
-    """ Create a new RealMassive Building.
+def relate_child_to_parent(new, parent_type, parent_id, child_type, child):
+    """ Relate a resource to another resource.
     """
-    return load_resource(new, "buildings", building_info)
-
-
-def load_space(new, space_info):
-    """ Create a new RealMassive Space.
-    """
-    return load_resource(new, "spaces", space_info)
-
-
-def load_team(new, team_info):
-    """ Create a new Team with the specified name.
-    """
-    return load_resource(new, "teams", team_info)
-
-
-def load_team_member(new, team_id, team_member):
-    """ Add a team_member to a team (indicated by team_id).
-    """
-    return new.teams(team_id).members.POST(json=team_member)
-
-
-def load_user(new, user_info):
-    """ Create a new RealMassive User.
-    """
-    return load_resource(new, "users", user_info)
-
-
-def load_contact(new, contact_info):
-    """ Create a new RealMassive Card.
-    """
-    return load_resource(new, "contacts", contact_info)
-
-
-def load_organization(new, organization_info):
-    """ Create a new Organization.
-    """
-    return load_resource(new, "organizations", organization_info)
+    return new(parent_type)(parent_id)(child_type).POST(json=child)
 
 
 def upload_media(media_service, filename, url):
@@ -497,40 +465,6 @@ def upload_media(media_service, filename, url):
     return new_url
 
 
-def load_media(new, media_info):
-    """ Create a new Media.
-    """
-    return load_resource(new, "media", media_info)
-
-
-def load_attachment(new, target_collection, target_id, attachment):
-    """ Add an media to a resource as an attachment.
-    """
-    return new(target_collection)(target_id)("attachments").POST(json=attachment)
-
-
-def load_listing(new, listing_type, listing_info):
-    """ Create a new RealMassive listing entity.
-
-        LeaseSchema
-        available_date = fields.Date()
-        rate = fields.Nested(RateSchema)
-        lease_term = fields.Nested(IntegerRangeSchema)
-        tenant_improvement = fields.String()
-
-        SubleaseSchema
-        rate = fields.Nested(RateSchema)
-        sublease_availability = fields.Nested(DateRangeSchema)
-    """
-    return load_resource(new, listing_type, listing_info)
-
-
-def relate_child_to_parent(new, parent_type, parent_id, child_type, child):
-    """ Relate a resource to another resource.
-    """
-    return new(parent_type)(parent_id)(child_type).POST(json=child)
-
-
 #######################################################################
 #######################################################################
 #######################################################################
@@ -545,6 +479,7 @@ def _remote_call(partial, params=None):
     return partial(params=params)
 
 
+# TODO: recursive?
 def _multi_api_call(partial_call, params=None):
     """ Return an entire API call by iterating over all the cursors.
     """
@@ -651,7 +586,7 @@ def get_new_media_for_old(old, new, media_service, keystring):
         return None
 
     # Create apiv2 media entity and return
-    media = load_media(new, media_info)
+    media = load_resource(new, "media", media_info)
     return media
 
 
@@ -665,14 +600,14 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     email_and_contacts = get_users_from_organization(old, organization_payload)  # Users & Contacts
 
     # Load v2 Team (Authorization)
-    team = load_team(new, team)
-    organization = load_organization(new, organization)
+    team = load_resource(new, "teams", team)
+    organization = load_resource(new, "organizations", organization)
     # TODO: Organization attachment
     logo = organization_payload.get("logo")
     if logo:
         media = get_new_media_for_old(old, new, media_service, logo["key"])
         attachment = transform_attachment(media)
-        load_attachment(new, "organizations", organization["data"]["id"], attachment)
+        relate_child_to_parent(new, "organizations", organization["data"]["id"], "attachments", attachment)
 
     # Load v2 Users & Contacts
     for email, contacts in email_and_contacts.iteritems():
@@ -681,19 +616,17 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         user_info = transform_user(old_contact)
 
         # Create v2 User
-        load_user(new, user_info)
+        load_resource(new, "users", user_info)
         # NOTE: load_user does not return user id. Need to GET
         user = {"data": new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]}
         # Add User to Team
         team_member = transform_team_member(user)
-        team_member = load_team_member(new, team["data"]["id"], team_member)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "members", team_member)
 
-        # Create v2 Contact
-        contact = load_contact(new, user_info)
-        # Associate contact with user
-        new.users(user["data"]["id"]).contacts.POST(json=contact)
-        # Associate contact with organization
-        new.organizations(organization["data"]["id"]).contacts.POST(json=contact)
+        # Create v2 Contact; Associate with User and Organization
+        contact = load_resource(new, "contacts", user_info)
+        relate_child_to_parent(new, "users", user["data"]["id"], "contacts", contact)
+        relate_child_to_parent(new, "organizations", organization["data"]["id"], "contacts", contact)
         # Contact attachment
         photo = old_contact.get("photo")
         if photo and "default_profile" not in photo:
@@ -706,10 +639,10 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                 "url": upload_media(media_service, filename, photo),
                 "user_approved": True,
             }
-            media = load_media(new, media_info)
+            media = load_resource(new, "media", media_info)
             if media:
                 attachment = transform_attachment(media)
-                load_attachment(new, "contacts", contact["data"]["id"], attachment)
+                relate_child_to_parent(new, "contacts", contact["data"]["id"], "attachments", attachment)
 
     # Load v2 Building assets
     old_building_asset_map = {}  # Map of old keystrings to new ids
@@ -718,7 +651,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     old_buildings = get_buildings_from_organization(old, organization_keystring)
     for building in old_buildings:
         new_building = transform_building_asset(building)
-        new_building = load_building(new, new_building)
+        new_building = load_resource(new, "buildings", new_building)
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
         # TODO: permissions
         # TODO: building listing?
@@ -729,7 +662,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
                 attachment = transform_attachment(media, precedence=float(i))
-                load_attachment(new, "buildings", new_building["data"]["id"], attachment)
+                relate_child_to_parent(new, "buildings", new_building["data"]["id"], "attachments", attachment)
                 old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
 
     # Load v2 Space/lease assets
@@ -739,7 +672,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     for space in old_spaces:
         # Create v2 asset
         new_space_asset = transform_space_asset(space)
-        new_space = load_space(new, new_space_asset)
+        new_space = load_resource(new, "spaces", new_space_asset)
         space_id = new_space["data"]["id"]
         old_space_asset_map[space["key"]] = space_id
 
@@ -763,7 +696,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             continue
 
         listing_info = transform_space_lease(space)
-        listing = load_listing(new, listing_type, listing_info)
+        listing = load_resource(new, listing_type, listing_info)
         space_listing = relate_child_to_parent(new, "spaces", space_id, listing_type, listing)
         # Relate organization to listing
         relate_child_to_parent(new, listing_type, listing["data"]["id"], "organizations", organization)
@@ -793,5 +726,5 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
                 attachment = transform_attachment(media, precedence=float(i))
-                load_attachment(new, listing_type, listing["data"]["id"], attachment)
+                relate_child_to_parent(new, listing_type, listing["data"]["id"], "attachments", attachment)
 
