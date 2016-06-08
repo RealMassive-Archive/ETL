@@ -10,8 +10,8 @@ TODO:
   - `pip install -r requirements.txt`
 
 2) Clone `upload` and `apiv2` repositories:
-  - git@github.com:RealMassive/upload.git@staging
-  - git@github.com:RealMassive/apiv2.git@staging
+  - Upload: `git@github.com:RealMassive/upload.git@staging`
+  - APIv2: `git@github.com:RealMassive/apiv2.git@staging`
 
 3) Build and run `upload` and `apiv2` servers (virtual environments recommended):
   - For upload: `./install.sh && python manage.py runserver --admin_port 8085 --port 8086`
