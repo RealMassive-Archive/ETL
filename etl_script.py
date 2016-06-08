@@ -103,6 +103,22 @@ def _transform_social(social_info):
 ################################
 
 
+def transform_permission(resource, permission_level="admin"):
+    """ Restructure a v2 Media resource into an attachment.
+    """
+    resource_type = resource["data"]["type"]
+    resource["data"].pop("attributes")
+    return {
+        "data": {
+            "type": "permissions",
+            "attributes": {
+                "permission": permission_level,
+                resource_type: resource
+            }
+        }
+    }
+
+
 def transform_attachment(media, precedence=0.0):
     """ Restructure a v2 Media resource into an attachment.
     """
@@ -594,38 +610,44 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     # Fetch organization payload
     organization_payload = old.api.v1.organizations(organization_keystring).GET()
 
-    # Transform v1 to v2
-    team = transform_organization_team(organization_payload)  # Authorization
-    organization = transform_organization_organization(organization_payload)  # Information
-    email_and_contacts = get_users_from_organization(old, organization_payload)  # Users & Contacts
-
     # Load v2 Team (Authorization)
-    team = load_resource(new, "teams", team)
-    organization = load_resource(new, "organizations", organization)
-    # TODO: Organization attachment
+    team_info = transform_organization_team(organization_payload)
+    team = load_resource(new, "teams", team_info)
+
+    # Load v2 Organization (Information)
+    organization_info = transform_organization_organization(organization_payload)
+    organization = load_resource(new, "organizations", organization_info)
+    relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/organizations", transform_permission(organization))  # Permission: organization
+    # Organization attachment
     logo = organization_payload.get("logo")
     if logo:
         media = get_new_media_for_old(old, new, media_service, logo["key"])
-        attachment = transform_attachment(media)
-        relate_child_to_parent(new, "organizations", organization["data"]["id"], "attachments", attachment)
+        if media:
+            relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
+            attachment = transform_attachment(media)
+            # TODO: metadata resource permission
+            relate_child_to_parent(new, "organizations", organization["data"]["id"], "attachments", attachment)
 
     # Load v2 Users & Contacts
+    email_and_contacts = get_users_from_organization(old, organization_payload)
     for email, contacts in email_and_contacts.iteritems():
         # NOTE: For now, 1:1 user:contact
         old_contact = contacts[0]
-        user_info = transform_user(old_contact)
 
         # Create v2 User
+        user_info = transform_user(old_contact)
         load_resource(new, "users", user_info)
         # NOTE: load_user does not return user id. Need to GET
         user = {"data": new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]}
         # Add User to Team
         team_member = transform_team_member(user)
+        # TODO: metadata resource permission
         relate_child_to_parent(new, "teams", team["data"]["id"], "members", team_member)
 
         # Create v2 Contact; Associate with User and Organization
         contact = load_resource(new, "contacts", user_info)
         relate_child_to_parent(new, "users", user["data"]["id"], "contacts", contact)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/contacts", transform_permission(contact))  # Permission: contact
         relate_child_to_parent(new, "organizations", organization["data"]["id"], "contacts", contact)
         # Contact attachment
         photo = old_contact.get("photo")
@@ -640,8 +662,11 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                 "user_approved": True,
             }
             media = load_resource(new, "media", media_info)
+
             if media:
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
                 attachment = transform_attachment(media)
+                # TODO: metadata resource permission
                 relate_child_to_parent(new, "contacts", contact["data"]["id"], "attachments", attachment)
 
     # Load v2 Building assets
@@ -652,8 +677,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     for building in old_buildings:
         new_building = transform_building_asset(building)
         new_building = load_resource(new, "buildings", new_building)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/buildings", transform_permission(new_building))  # Permission: building asset
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
-        # TODO: permissions
         # TODO: building listing?
         # TODO: building listing contacts?
         # Building attachments
@@ -661,7 +686,9 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         for i, old_attachment in enumerate(attachments):
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
                 attachment = transform_attachment(media, precedence=float(i))
+                # TODO: metadata resource permission
                 relate_child_to_parent(new, "buildings", new_building["data"]["id"], "attachments", attachment)
                 old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
 
@@ -673,6 +700,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         # Create v2 asset
         new_space_asset = transform_space_asset(space)
         new_space = load_resource(new, "spaces", new_space_asset)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/spaces", transform_permission(new_space))  # Permission: space asset
         space_id = new_space["data"]["id"]
         old_space_asset_map[space["key"]] = space_id
 
@@ -698,6 +726,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         listing_info = transform_space_lease(space)
         listing = load_resource(new, listing_type, listing_info)
         space_listing = relate_child_to_parent(new, "spaces", space_id, listing_type, listing)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/{}".format(listing_type), transform_permission(listing))  # Permission: space listing
         # Relate organization to listing
         relate_child_to_parent(new, listing_type, listing["data"]["id"], "organizations", organization)
         # Relate contacts to listing
@@ -725,6 +754,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                     continue
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
                 attachment = transform_attachment(media, precedence=float(i))
+                # TODO: metadata resource permission
                 relate_child_to_parent(new, listing_type, listing["data"]["id"], "attachments", attachment)
 
