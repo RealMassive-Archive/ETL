@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 import logging
 import mimetypes
 
@@ -240,15 +241,19 @@ def transform_space_lease(space_info):
 
         available_date = fields.Date()
         rate = fields.Nested(RateSchema)
-        #TODO: lease_term int4range not null
+        lease_term int4range not null
         tenant_improvement = fields.String()
     """
-    return clean_up_shit_nulls({
+    data = {
         "available_date": space_info.get("availability_date"),
         "rate": _transform_space_rate(space_info),
 #        "lease_term": space_info.get("lease_term"),  # TODO
         "tenant_improvement": space_info.get("ti")
-    })
+    }
+
+    if data["available_date"]:
+        data["available_date"] = datetime.strptime(data["available_date"], "%Y-%m-%d").isoformat()
+    return clean_up_shit_nulls(data)
 
 
 def transform_space_sublease(space_info):
@@ -325,7 +330,7 @@ def transform_building_asset(building_info):
     if data["clear_height"]:
         data["clear_height"] = {
             "value": data["clear_height"],
-            "units": "sqft"  # TODO: ft? in?
+            "units": "ft"  # TODO: ft? in?
         }
     if data["leed_rating"]:
         data["leed_rating"] = data["leed_rating"].lower()
