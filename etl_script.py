@@ -84,6 +84,34 @@ def transform_media(media_info):
     return clean_up_shit_nulls(data)
 
 
+def transform_attachment(media, precedence=0.0):
+    """ Restructure a v2 Media resource into an attachment.
+    """
+    return {
+        "data": {
+            "type": "attachments",
+            "attributes": {
+                "precedence": precedence,
+                "media": media
+            }
+        }
+    }
+
+
+def transform_team_member(team_member, membership="accepted"):
+    """ Restructure a v2 User resource into a team_member.
+    """
+    return {
+        "data": {
+            "type": "members",
+            "attributes": {
+                "membership": membership,
+                "users": team_member
+            }
+        }
+    }
+
+
 def _transform_social(social_info):
     """ Transform v1 social_links to v2 social.
 
@@ -398,90 +426,57 @@ def transform_user(user_data):
 #######################################################################
 #######################################################################
 
+def load_resource(new, resource_type, resource_attributes):
+    """ Create a new resource.
+    """
+    return new(resource_type).POST(json={
+        "data": {
+            "type": resource_type,
+            "attributes": resource_attributes
+        }
+    })
+
+
 def load_building(new, building_info):
     """ Create a new RealMassive Building.
     """
-    return new.buildings.POST(json={
-        "data": {
-            "type": "buildings",
-            "attributes": building_info
-        }
-    })
+    return load_resource(new, "buildings", building_info)
 
 
 def load_space(new, space_info):
     """ Create a new RealMassive Space.
     """
-    return new.spaces.POST(json={
-        "data": {
-            "type": "spaces",
-            "attributes": space_info
-        }
-    })
+    return load_resource(new, "spaces", space_info)
 
 
 def load_team(new, team_info):
     """ Create a new Team with the specified name.
     """
-    return new.teams.POST(json={
-        "data": {
-            "type": "teams",
-            "attributes": team_info
-        }
-    })
+    return load_resource(new, "teams", team_info)
 
 
-def load_team_member(new, team_id, team_member, membership="accepted"):
+def load_team_member(new, team_id, team_member):
     """ Add a team_member to a team (indicated by team_id).
     """
-    return new.teams(team_id).members.POST(json={
-        "data": {
-            "type": "members",
-            "attributes": {
-                "membership": membership,
-                "users": team_member
-            }
-        }
-    })
+    return new.teams(team_id).members.POST(json=team_member)
 
 
 def load_user(new, user_info):
     """ Create a new RealMassive User.
     """
-    return new.users.POST(json={
-        "data": {
-            "type": "users",
-            "attributes": user_info
-        }
-    })
+    return load_resource(new, "users", user_info)
 
 
 def load_contact(new, contact_info):
     """ Create a new RealMassive Card.
     """
-    return new.contacts.POST(json={
-        "data": {
-            "type": "contacts",
-            "attributes": contact_info
-        }
-   })
+    return load_resource(new, "contacts", contact_info)
 
 
 def load_organization(new, organization_info):
     """ Create a new Organization.
     """
-    return new.organizations.POST(json={
-        "data": {
-            "type": "organizations",
-            "attributes": organization_info
-        }
-    })
-
-
-def load_organization_contact(new, organization_id, contact):
-    """ Add an organization_member to and organization.
-    """
-    return new.organizations(organization_id).contacts.POST(json=contact)
+    return load_resource(new, "organizations", organization_info)
 
 
 def upload_media(media_service, filename, url):
@@ -500,31 +495,13 @@ def upload_media(media_service, filename, url):
 def load_media(new, media_info):
     """ Create a new Media.
     """
-    return new.media.POST(json={
-        "data": {
-            "type": "media",
-            "attributes": media_info
-        }
-    })
+    return load_resource(new, "media", media_info)
 
 
-def load_attachment(new, target_collection, target_id, media, precedence=0.0):
+def load_attachment(new, target_collection, target_id, attachment):
     """ Add an media to a resource as an attachment.
-
-    Arguments:
-        target_resource: resource type of target
-        target_id: ID of target
-        media_info: data of media resource
     """
-    return new(target_collection)(target_id)("attachments").POST(json={
-        "data": {
-            "type": "attachments",
-            "attributes": {
-                "precedence": precedence,
-                "media": media
-            }
-        }
-    })
+    return new(target_collection)(target_id)("attachments").POST(json=attachment)
 
 
 def load_listing(new, listing_type, listing_info):
@@ -540,18 +517,13 @@ def load_listing(new, listing_type, listing_info):
         rate = fields.Nested(RateSchema)
         sublease_availability = fields.Nested(DateRangeSchema)
     """
-    return new(listing_type).POST(json={
-        "data": {
-            "type": listing_type,
-            "attributes": listing_info
-        }
-    })
+    return load_resource(new, listing_type, listing_info)
 
 
-def attach_listing(new, target_collection, target_id, listing_type, listing):
-    """ Create a new RealMassive lease on Space (indicated by space_id).
+def relate_child_to_parent(new, parent_type, parent_id, child_type, child):
+    """ Relate a resource to another resource.
     """
-    return new(target_collection)(target_id)(listing_type).POST(json=listing)
+    return new(parent_type)(parent_id)(child_type).POST(json=child)
 
 
 #######################################################################
@@ -562,8 +534,10 @@ from collections import defaultdict
 
 
 @retry
-def _single_api_call(partial_call, params=None):
-    return partial_call(params=params)
+def _remote_call(partial, params=None):
+    if not params:
+        params = {}
+    return partial(params=params)
 
 
 def _multi_api_call(partial_call, params=None):
@@ -572,30 +546,13 @@ def _multi_api_call(partial_call, params=None):
     results = []
     if not params:
         params = {}
-    call = _single_api_call(partial_call, params=params)
+    call = _remote_call(partial_call, params=params)
     results.extend(call["results"])
     while call.get("cursor"):
         params.update({"cursor": call["cursor"]})
-        call = _single_api_call(partial_call, params=params)
+        call = _remote_call(partial_call, params=params)
         results.extend(call["results"])
     return results
-
-
-def get_all_organizations(old):
-    """ Return a list of v1 organizations.
-    """
-    # Get keys first, since we can't do a GET on api/v1/organizations
-    params = {"fields": "[key]"}
-    results = _multi_api_call(old.api.v1.organizations.search.GET, params=params)
-    organization_keys = [thing["key"] for thing in results]
-
-    # Use keys to do GETs on individual orgs
-    organizations = []
-    for org_key in organization_keys:
-        org = old.api.v1.organizations(org_key).GET()
-        organizations.append(org)
-
-    return organizations
 
 
 def get_users_from_organization(old, organization_payload):
@@ -628,7 +585,6 @@ def get_spaces_from_organization(old, organization_keystring):
 
         Only return leases.
     """
-    space_keys = []
     params = {
         "building.manager.key": organization_keystring,
         "space_type": "lease"
@@ -710,7 +666,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     logo = organization_payload.get("logo")
     if logo:
         media = get_new_media_for_old(old, new, media_service, logo["key"])
-        attachment = load_attachment(new, "organizations", organization["data"]["id"], media)
+        attachment = transform_attachment(media)
+        load_attachment(new, "organizations", organization["data"]["id"], attachment)
 
     # Load v2 Users & Contacts
     for email, contacts in email_and_contacts.iteritems():
@@ -721,14 +678,15 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         # Create v2 User
         load_user(new, user_info)
         # NOTE: load_user does not return user id. Need to GET
-        user = new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]
+        user = {"data": new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]}
         # Add User to Team
-        team_member = load_team_member(new, team["data"]["id"], {"data": user})
+        team_member = transform_team_member(user)
+        team_member = load_team_member(new, team["data"]["id"], team_member)
 
         # Create v2 Contact
         contact = load_contact(new, user_info)
         # Associate contact with user
-        new.users(user["id"]).contacts.POST(json=contact)
+        new.users(user["data"]["id"]).contacts.POST(json=contact)
         # Associate contact with organization
         new.organizations(organization["data"]["id"]).contacts.POST(json=contact)
         # Contact attachment
@@ -744,8 +702,9 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                 "user_approved": True,
             }
             media = load_media(new, media_info)
-            if not media:
-                attachment = load_attachment(new, "contacts", contact["data"]["id"], media)
+            if media:
+                attachment = transform_attachment(media)
+                load_attachment(new, "contacts", contact["data"]["id"], attachment)
 
     # Load v2 Building assets
     old_building_asset_map = {}  # Map of old keystrings to new ids
@@ -758,12 +717,14 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
         # TODO: permissions
         # TODO: building listing?
+        # TODO: building listing contacts?
         # Building attachments
         attachments = building.get("attachments", [])
         for i, old_attachment in enumerate(attachments):
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
-                attachment = load_attachment(new, "buildings", new_building["data"]["id"], media, precedence=float(i))
+                attachment = transform_attachment(media, precedence=float(i))
+                load_attachment(new, "buildings", new_building["data"]["id"], attachment)
                 old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
 
     # Load v2 Space/lease assets
@@ -798,12 +759,25 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
 
         listing_info = transform_space_lease(space)
         listing = load_listing(new, listing_type, listing_info)
-        space_listing = attach_listing(new, "spaces", space_id, listing_type, listing)
-        # TODO: relate organization to listing
-        # TODO: relate contacts to listing
+        space_listing = relate_child_to_parent(new, "spaces", space_id, listing_type, listing)
+        # Relate organization to listing
+        relate_child_to_parent(new, listing_type, listing["data"]["id"], "organizations", organization)
+        # Relate contacts to listing
+        for contact in space.get("contacts", []):
+            key = contact.get("master_key")
+            if key:
+                # Get user from old for email
+                user = _remote_call(old.api.v1.users(key).GET)
+                email = user.get("email")
+                if email:
+                    contacts = new.contacts.GET(params={"filter[where][email]": email})
+                    data = contacts.get("data")
+                    if data:
+                        contact = {"data": data[0]}
+                        contact["data"].pop("relationships")  # NOTE: will barf if sees relationships
+                        relate_child_to_parent(new, listing_type, listing["data"]["id"], "contacts", contact)
 
         # Attach media to space
-        # TODO: i think this should be listing
         attachments = space.get("attachments", [])
         for i, old_attachment in enumerate(attachments):
             if new_building_id:
@@ -813,5 +787,6 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                     continue
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
-                attachment = load_attachment(new, "spaces", new_space["data"]["id"], media, precedence=float(i))
+                attachment = transform_attachment(media, precedence=float(i))
+                load_attachment(new, listing_type, listing["data"]["id"], attachment)
 
