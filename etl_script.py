@@ -489,7 +489,12 @@ def upload_media(media_service, filename, url):
     # NOTE: hack around handling of files in authclient
     upload_url = media_service._path[0]
     upload_resp = requests.post(upload_url, files={"file": (filename, fetch_resp.content)})
-    return upload_resp.headers["location"]
+    # TODO: remove try/except once everyone is using new upload service
+    try:
+        new_url = str(media_service(upload_resp.json()["id"]))
+    except:
+        new_url = upload_resp.headers["location"]
+    return new_url
 
 
 def load_media(new, media_info):
