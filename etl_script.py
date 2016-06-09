@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime
+import functools
 import logging
 import mimetypes
 
@@ -7,449 +7,42 @@ import requests
 from requests.exceptions import HTTPError
 from retrying import retry
 
-
-def clean_up_shit_nulls(stuff, shit_nulls=None):
-    if not shit_nulls:
-        shit_nulls = ["", {}, None]
-
-    clean_dict = {}
-    for k, v in stuff.iteritems():
-        if v in shit_nulls:
-            continue
-        elif isinstance(v, dict):
-            v = clean_up_shit_nulls(v, shit_nulls=shit_nulls)
-        clean_dict[k] = v
-    return clean_dict
+import transform
 
 
-def _transform_address(address_info):
-    """ Transform v1 address to v2.
+def log_exception_on_retry(exception):
+    logging.warning("Retrying: {}".format(exception))
+    return True
+log_and_retry = functools.partial(retry, retry_on_exception=log_exception_on_retry)
 
-        state = fields.String()
-        county = fields.String()
-        zipcode = fields.String()
-        street = fields.String()
-        address = fields.String()
-        full_state = fields.String()
-        geo_latitude = fields.Float()
-        geo_longitude = fields.Float()
+
+@log_and_retry()
+def _remote_call(partial, params=None):
+    if not params:
+        params = {}
+    return partial(params=params)
+
+
+# TODO: recursive?
+def _multi_api_call(partial_call, params=None):
+    """ Return an entire API call by iterating over all the cursors.
     """
-    data = {
-#        "address": None,
-        "city": address_info.get("city"),
-        "county": address_info.get("county"),
-#        "full_state": None,
-        "state": address_info.get("state"),
-        "street": address_info.get("street"),
-        "zipcode": address_info.get("zipcode")
-    }
-    geo = address_info.get("geo")
-    if geo:
-        data.update({
-            "latitude": geo.get("latitude"),
-            "longitude": geo.get("longitude")
-        })
-    return clean_up_shit_nulls(data)
-
-
-def transform_media(media_info):
-    """ Transform v1 media into v2 media.
-
-        category = fields.String()
-        title = fields.String()
-        description = fields.String()
-        url = fields.String()
-        mime_type = fields.String()
-        preview = fields.String()
-        user_approved = fields.Boolean()
-        ip_status = fields.String()
-        height = fields.Integer()
-        width = fields.Integer()
-        video_tag = fields.String()
-        file_size = fields.String()
-    """
-    data = {
-        "category": media_info.get("category"),
-        "description": media_info.get("description"),
-        "title": media_info.get("title"),
-        "url": media_info.get("url"),
-        "mime_type": media_info.get("mimetype"),
-#        "preview": fields.String()
-        "user_approved": media_info.get("approved"),
-        "ip_status": media_info.get("ip_status"),
-        "height": media_info.get("height"),
-        "width": media_info.get("width"),
-#        "video_tag": media_info.get(""),
-#        "file_size": fields.String("")
-    }
-    return clean_up_shit_nulls(data)
-
-
-def _transform_social(social_info):
-    """ Transform v1 social_links to v2 social.
-
-        website = fields.String()
-        linkedin = fields.String()
-        twitter = fields.String()
-    """
-    data = {
-        "website": social_info.get("webpage"),
-        "linkedin": social_info.get("linkedin"),
-        "twitter": social_info.get("twitter")
-    }
-    return clean_up_shit_nulls(data)
-
-################################
-# Metadata resource transforms #
-################################
-
-
-def transform_permission(resource, permission_level="admin"):
-    """ Restructure a v2 Media resource into an attachment.
-    """
-    resource_type = resource["data"]["type"]
-    resource["data"].pop("attributes")
-    return {
-        "data": {
-            "type": "permissions",
-            "attributes": {
-                "permission": permission_level,
-                resource_type: resource
-            }
-        }
-    }
-
-
-def transform_attachment(media, precedence=0.0):
-    """ Restructure a v2 Media resource into an attachment.
-    """
-    return {
-        "data": {
-            "type": "attachments",
-            "attributes": {
-                "precedence": precedence,
-                "media": media
-            }
-        }
-    }
-
-
-def transform_team_member(team_member, membership="accepted"):
-    """ Restructure a v2 User resource into a team_member.
-    """
-    return {
-        "data": {
-            "type": "members",
-            "attributes": {
-                "membership": membership,
-                "users": team_member
-            }
-        }
-    }
-
-
-#######################################################################
-## Spaces
-#######################################################################
-
-def transform_space_asset(space_info):
-    """ Transform v1 Space to v2 asset.
-
-        floor_number = fields.String()
-        max_contiguous = fields.Nested(AreaSchema)
-        min_divisible = fields.Nested(AreaSchema)
-        office_percentage = fields.Integer()
-        space_size = fields.Nested(AreaSchema)
-        unit_number = fields.String()
-    """
-    # Heading conversion
-    data = {
-        "floor_number": space_info.get("floor_number"),
-        "max_contiguous": space_info.get("max_contiguous"),
-        "min_divisible": space_info.get("min_divisible"),
-        "office_percentage": space_info.get("office_finish_percentage"),
-        "space_size": space_info.get("space_available"),
-        "unit_number": space_info.get("unit_number")
-    }
-
-    # Value conversion
-    if data["space_size"]:
-        units = space_info.get("space_available_units")
-        if units:
-            units = units.lower()
-            if "sf" == units:
-                units = "sqft"
-        else:
-            units = "sqft"
-        data["space_size"] = {
-            "value": data["space_size"],
-            "units": units
-        }
-    # Max. contig (if not provided, default to space_size)
-    if data["max_contiguous"]:
-        data["max_contiguous"] = {
-            "value": data["max_contiguous"],
-            "units": "sqft"
-        }
-    elif data["space_size"]:
-        data["max_contiguous"] = {
-            "value": data["space_size"]["value"],
-            "units": data["space_size"]["units"]
-        }
-    # Min. divis (if not provided, default to space_size)
-    if data["min_divisible"]:
-        data["min_divisible"] = {
-            "value": data["min_divisible"],
-            "units": "sqft"
-        }
-    elif data["space_size"]:
-        data["min_divisible"] = {
-            "value": data["space_size"]["value"],
-            "units": data["space_size"]["units"]
-        }
-    return clean_up_shit_nulls(data)
-
-
-def _transform_space_rate(space_info):
-    """ Transform v1 rate info into v2 rate.
-
-        rate = fields.Nested(CurrencySchema)
-        frequency = fields.String(); ["yearly", "monthly"]
-        type = fields.String(); ["full_service_gross", "industrial_gross", "modified_gross", "single_net", "double_net", "triple_net", "other"]
-    """
-    # Heading conversion
-    data = {
-        "rate": {
-            "value": space_info.get("rate"),
-            "units": "usd"
-        },
-        "frequency": space_info.get("rate_frequency"),
-        "type": space_info.get("rate_type")
-    }
-
-    # Value conversion
-    if data["frequency"]:
-        data["frequency"] = data["frequency"].lower()
-    if data["type"]:
-        if data["type"] == "n/a":
-            data["type"] = None
-    return data
-
-
-def transform_space_lease(space_info):
-    """ Transform v1 Space into v2 lease contract.
-
-        available_date = fields.Date()
-        rate = fields.Nested(RateSchema)
-        lease_term int4range not null
-        tenant_improvement = fields.String()
-    """
-    data = {
-        "available_date": space_info.get("availability_date"),
-        "rate": _transform_space_rate(space_info),
-#        "lease_term": space_info.get("lease_term"),  # TODO
-        "tenant_improvement": space_info.get("ti")
-    }
-
-    if data["available_date"]:
-        data["available_date"] = datetime.strptime(data["available_date"], "%Y-%m-%d").isoformat()
-    return clean_up_shit_nulls(data)
-
-
-def transform_space_sublease(space_info):
-    """ Transform v1 Space into v2 sublease contract.
-
-        rate = fields.Nested(RateSchema)
-        #TODO: sublease_availability tsrange not null
-    """
-    return {
-        "rate": _transform_space_rate(space_info),
-#        "sublease_availability": space_info.get("expiration_data")  # TODO
-    }
-
-
-#######################################################################
-## Buildings
-#######################################################################
-
-def transform_building_asset(building_info):
-    """ Transform v1 Building to v2 building asset.
-
-        address = fields.Nested(AddressSchema)
-        air_conditioned = fields.Boolean()
-        building_size = fields.Nested(AreaSchema)
-        build_status = fields.String(); ["existing", "planned", "in_development"]
-        building_type = fields.String(); ["office", "retail", "flex", "industrial", "multifamily", "mixed"]
-        building_class = fields.String(); ["A", "B", "C"]
-        clear_height = fields.Nested(LengthSchema)
-        description = fields.String()
-        floor_count = fields.Integer()
-        leed_rating = fields.String(); ["none", "certified", "gold", "silver", "platinum"]
-        signage = fields.String()
-        sprinkler = fields.Boolean()
-        tenancy = fields.String(); ["multiple", "single"]
-        title = fields.String()
-        year_built = fields.Integer()
-        year_renovated = fields.Integer()
-    """
-    # Heading conversion
-    data = {
-#        "attachments": building_data.get("attachments") or [],
-        "address": _transform_address(building_info.get("address")),
-        "air_conditioned": building_info.get("ac"),
-        "build_status": building_info.get("build_status"),
-        "building_class": building_info.get("building_class"),
-        "building_size": building_info.get("size"),
-        "building_type": building_info.get("type"),
-        "clear_height": building_info.get("clear_height"),
-        "description": building_info.get("description"),
-        "floor_count": building_info.get("floor_count"),
-        "leed_rating": building_info.get("leed"),
-        "signage": building_info.get("signage"),
-        "sprinkler": building_info.get("sprinkler"),
-        "tenancy": building_info.get("tenancy"),
-        "title": building_info.get("title"),
-        "year_built": building_info.get("year_built"),
-        "year_renovated": building_info.get("year_renovated"),
-    }
-
-    # Value conversion
-    if data["build_status"]:
-        if "plan" in data["build_status"].lower():
-            data["build_status"] = "planned"
-        elif "devel" in data["build_status"].lower():
-            data["build_status"] = "in_development"
-        data["build_status"] = data["build_status"].lower()
-    if data["building_size"]:
-        data["building_size"] = {
-            "value": data["building_size"],
-            "units": "sf"
-        }
-    if data["building_type"]:
-        data["building_type"] = data["building_type"].lower()
-    if data["clear_height"]:
-        data["clear_height"] = {
-            "value": data["clear_height"],
-            "units": "ft"  # TODO: ft? in?
-        }
-    if data["leed_rating"]:
-        data["leed_rating"] = data["leed_rating"].lower()
-    if data["sprinkler"]:
-        if "es" in data["sprinkler"].lower():  # TODO: ESFR?
-            data["sprinkler"] = True
-        else:
-            data["sprinkler"] = False
-    if data["tenancy"]:
-        if "sin" in data["tenancy"].lower():
-            data["tenancy"] = "single"
-        elif "mult" in data["tenancy"].lower():
-            data["tenancy"] = "multiple"
-
-    return clean_up_shit_nulls(data)
-
-
-def transform_building_lease(building_info):  # TODO
-    """ Transform v1 Building to v2 lease contract.
-    """
-
-
-def transform_building_sale(building_info):  # TODO
-    """ Transform v1 Building to v2 sale contract.
-    """
-
-
-#######################################################################
-## Organizations
-#######################################################################
-
-def transform_organization_organization(firm_data):
-    """ Transform v1 Organization to v2 Firm.
-
-        address = fields.Nested(AddressSchema)
-        bio = fields.String()
-        email = fields.String()
-        name = fields.String()
-        phone = fields.String()
-        social = fields.Nested(SocialLinksSchema)
-    """
-    # Heading conversion
-    data = {
-        "address": firm_data.get("address"),
-        "bio": firm_data.get("bio"),
-        "email": firm_data.get("email"),
-        "name": firm_data.get("name"),
-        "phone": firm_data.get("phone"),
-        "social": firm_data.get("social_links"),
-#        "logo": firm_data.get("logo"),
-    }
-
-    # Value conversion
-    if data["address"]:
-        data["address"] = _transform_address(data["address"])
-    if data["social"]:
-        data["social"] = _transform_social(data["social"])
-
-    return clean_up_shit_nulls(data)
-
-
-def transform_organization_team(firm_data):
-    """ Transform v1 Organization to v2 Team.
-
-        name
-    """
-    return {"name": firm_data.get("name")}
-
-
-#######################################################################
-## Users
-#######################################################################
-
-def transform_user(user_data):
-    """ Transform v1 User to v2 Contact.
-
-        bio = fields.String()
-        ccim_number = fields.String()
-        license_number = fields.String()
-        sior_member = fields.Boolean()
-        sior_number = fields.String()
-        title = fields.String()
-        email = fields.String()
-        first_name = fields.String()
-        last_name = fields.String()
-        mobile_phone = fields.String()
-        phone = fields.String()
-        social = fields.nested(SocialLinksSchema)
-    """
-    # Heading conversion
-    data = {
-        "bio": user_data.get("bio"),
-        "ccim_number": user_data.get("ccim_number"),
-        "license_number": user_data.get("license_number"),
-        "email": user_data.get("email"),
-        "first_name": user_data.get("first_name"),
-        "last_name": user_data.get("last_name"),
-        "mobile_phone": user_data.get("mobile_phone"),
-        "phone": user_data.get("phone"),
-        "sior_number": user_data.get("sior_number"),
-        "social": user_data.get("social_links"),
-        "title": user_data.get("title")
-#        "photo": user_data.get("photo")
-    }
-
-    # Value conversion
-    if data["ccim_number"]:
-        data["ccim_member"] = True
-    if data["sior_number"]:
-        data["sior_member"] = True
-    if data["social"]:
-        data["social"] = _transform_social(data["social"])
-
-    return clean_up_shit_nulls(data)
+    results = []
+    if not params:
+        params = {}
+    call = _remote_call(partial_call, params=params)
+    results.extend(call["results"])
+    while call.get("cursor"):
+        params.update({"cursor": call["cursor"]})
+        call = _remote_call(partial_call, params=params)
+        results.extend(call["results"])
+    return results
 
 
 #######################################################################
 #######################################################################
 #######################################################################
+
 
 def load_resource(new, resource_type, resource_attributes):
     """ Create a new resource.
@@ -491,30 +84,6 @@ def upload_media(media_service, filename, url):
 #######################################################################
 
 from collections import defaultdict
-
-
-@retry
-def _remote_call(partial, params=None):
-    if not params:
-        params = {}
-    return partial(params=params)
-
-
-# TODO: recursive?
-def _multi_api_call(partial_call, params=None):
-    """ Return an entire API call by iterating over all the cursors.
-    """
-    results = []
-    if not params:
-        params = {}
-    call = _remote_call(partial_call, params=params)
-    results.extend(call["results"])
-    while call.get("cursor"):
-        params.update({"cursor": call["cursor"]})
-        call = _remote_call(partial_call, params=params)
-        results.extend(call["results"])
-    return results
-
 
 def get_users_from_organization(old, organization_payload):
     """ Return a dict of lists, containing v1 Users per email address.
@@ -597,7 +166,7 @@ def get_new_media_for_old(old, new, media_service, keystring):
             logging.error("skipping media due to unknown file type: {}".format(keystring))
             return None
     # Transform to new schema
-    media_info = transform_media(old_media)
+    media_info = transform.media(old_media)
 
     try:
         # Upload to new upload service, and update the url
@@ -616,20 +185,20 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     organization_payload = old.api.v1.organizations(organization_keystring).GET()
 
     # Load v2 Team (Authorization)
-    team_info = transform_organization_team(organization_payload)
+    team_info = transform.organization_team(organization_payload)
     team = load_resource(new, "teams", team_info)
 
     # Load v2 Organization (Information)
-    organization_info = transform_organization_organization(organization_payload)
+    organization_info = transform.organization_organization(organization_payload)
     organization = load_resource(new, "organizations", organization_info)
-    relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/organizations", transform_permission(organization))  # Permission: organization
+    relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/organizations", transform.permission(organization))  # Permission: organization
     # Organization attachment
     logo = organization_payload.get("logo")
     if logo:
         media = get_new_media_for_old(old, new, media_service, logo["key"])
         if media:
-            relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
-            attachment = transform_attachment(media)
+            relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform.permission(media))  # Permission: media
+            attachment = transform.attachment(media)
             # TODO: metadata resource permission
             relate_child_to_parent(new, "organizations", organization["data"]["id"], "attachments", attachment)
 
@@ -640,19 +209,19 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         old_contact = contacts[0]
 
         # Create v2 User
-        user_info = transform_user(old_contact)
+        user_info = transform.user(old_contact)
         load_resource(new, "users", user_info)
         # NOTE: load_user does not return user id. Need to GET
         user = {"data": new.users.GET(params={"filter[where][email]": user_info["email"]})["data"][0]}
         # Add User to Team
-        team_member = transform_team_member(user)
+        team_member = transform.team_member(user)
         # TODO: metadata resource permission
         relate_child_to_parent(new, "teams", team["data"]["id"], "members", team_member)
 
         # Create v2 Contact; Associate with User and Organization
         contact = load_resource(new, "contacts", user_info)
         relate_child_to_parent(new, "users", user["data"]["id"], "contacts", contact)
-        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/contacts", transform_permission(contact))  # Permission: contact
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/contacts", transform.permission(contact))  # Permission: contact
         relate_child_to_parent(new, "organizations", organization["data"]["id"], "contacts", contact)
         # Contact attachment
         photo = old_contact.get("photo")
@@ -669,8 +238,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             media = load_resource(new, "media", media_info)
 
             if media:
-                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
-                attachment = transform_attachment(media)
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform.permission(media))  # Permission: media
+                attachment = transform.attachment(media)
                 # TODO: metadata resource permission
                 relate_child_to_parent(new, "contacts", contact["data"]["id"], "attachments", attachment)
 
@@ -680,9 +249,9 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
 
     old_buildings = get_buildings_from_organization(old, organization_keystring)
     for building in old_buildings:
-        new_building = transform_building_asset(building)
+        new_building = transform.building_asset(building)
         new_building = load_resource(new, "buildings", new_building)
-        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/buildings", transform_permission(new_building))  # Permission: building asset
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/buildings", transform.permission(new_building))  # Permission: building asset
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
         # TODO: building listing?
         # TODO: building listing contacts?
@@ -691,8 +260,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         for i, old_attachment in enumerate(attachments):
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
-                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
-                attachment = transform_attachment(media, precedence=float(i))
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform.permission(media))  # Permission: media
+                attachment = transform.attachment(media, precedence=float(i))
                 # TODO: metadata resource permission
                 relate_child_to_parent(new, "buildings", new_building["data"]["id"], "attachments", attachment)
                 old_building_media_map[building["key"]][old_attachment["key"]] = media["data"]["id"]
@@ -703,9 +272,9 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
     old_spaces = get_spaces_from_organization(old, organization_keystring)
     for space in old_spaces:
         # Create v2 asset
-        new_space_asset = transform_space_asset(space)
+        new_space_asset = transform.space_asset(space)
         new_space = load_resource(new, "spaces", new_space_asset)
-        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/spaces", transform_permission(new_space))  # Permission: space asset
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/spaces", transform.permission(new_space))  # Permission: space asset
         space_id = new_space["data"]["id"]
         old_space_asset_map[space["key"]] = space_id
 
@@ -728,10 +297,10 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             logging.warning("Unknown listing_type {} for space {}".format(listing_type, space["key"]))
             continue
 
-        listing_info = transform_space_lease(space)
+        listing_info = transform.space_lease(space)
         listing = load_resource(new, listing_type, listing_info)
         space_listing = relate_child_to_parent(new, "spaces", space_id, listing_type, listing)
-        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/{}".format(listing_type), transform_permission(listing))  # Permission: space listing
+        relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/{}".format(listing_type), transform.permission(listing))  # Permission: space listing
         # Relate organization to listing
         relate_child_to_parent(new, listing_type, listing["data"]["id"], "organizations", organization)
         # Relate contacts to listing
@@ -759,8 +328,8 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
                     continue
             media = get_new_media_for_old(old, new, media_service, old_attachment["key"])
             if media:
-                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform_permission(media))  # Permission: media
-                attachment = transform_attachment(media, precedence=float(i))
+                relate_child_to_parent(new, "teams", team["data"]["id"], "permissions/media", transform.permission(media))  # Permission: media
+                attachment = transform.attachment(media, precedence=float(i))
                 # TODO: metadata resource permission
                 relate_child_to_parent(new, listing_type, listing["data"]["id"], "attachments", attachment)
 
