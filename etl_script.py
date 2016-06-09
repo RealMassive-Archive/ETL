@@ -229,7 +229,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         # Add User to Team
         team_member = transform.team_member(user)
         # TODO: metadata resource permission
-        relate_child_to_parent(new, "teams", team["data"]["id"], "members", team_member)
+        relate_child_to_parent(new, "teams", team["data"]["id"], "memberships", team_member)
 
         # Create v2 Contact; Associate with User and Organization
         contact = load_resource(new, "contacts", user_info)

@@ -135,7 +135,7 @@ def team_member(team_member, membership="accepted"):
     """
     return {
         "data": {
-            "type": "members",
+            "type": "memberships",
             "attributes": {
                 "membership": membership,
                 "users": team_member
