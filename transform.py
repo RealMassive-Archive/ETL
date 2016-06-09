@@ -65,17 +65,19 @@ def media(media_info):
     data = {
         "category": media_info.get("category"),
         "description": media_info.get("description"),
+        "height": media_info.get("height"),
+        "ip_status": media_info.get("ip_status"),
+        "mime_type": media_info.get("mime_type"),
+        "preview": media_info.get("preview_info"),
         "title": media_info.get("title"),
         "url": media_info.get("url"),
-        "mime_type": media_info.get("mimetype"),
-#        "preview": fields.String()
         "user_approved": media_info.get("approved"),
-        "ip_status": media_info.get("ip_status"),
-        "height": media_info.get("height"),
         "width": media_info.get("width"),
 #        "video_tag": media_info.get(""),
 #        "file_size": fields.String("")
     }
+    if data["preview"]:
+        data["preview"] = data["preview"].get("url")
     return clean_up_shit_nulls(data)
 
 

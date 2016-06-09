@@ -179,6 +179,11 @@ def get_new_media_for_old(old, new, media_service, keystring):
     if old_media["is_video"] == True:
         pass
     else:
+        if media.get("preview"):
+            try:
+                media["preview"] = upload_media(media_service, "preview.jpe", media["preview"])
+            except:
+                logging.warning("Skipping because image could not be fetched: {}".format(media["preview"]))
         try:
             # Upload to new upload service, and update the url
             media["url"] = upload_media(media_service, old_media["filename"], media["url"])
