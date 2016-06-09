@@ -11,6 +11,8 @@ import transform
 
 
 def log_exception_on_retry(exception):
+    """ Logs an exception and returns True -- to be used by custom `retry` decorator.
+    """
     logging.warning("Retrying: {}".format(exception))
     return True
 log_and_retry = functools.partial(retry, retry_on_exception=log_exception_on_retry)
@@ -23,7 +25,6 @@ def _remote_call(partial, params=None):
     return partial(params=params)
 
 
-# TODO: recursive?
 def _multi_api_call(partial_call, params=None):
     """ Return an entire API call by iterating over all the cursors.
     """
@@ -144,40 +145,47 @@ def get_subleases_from_user(old, user):
     return _multi_api_call(old.api.v1.spaces.GET, params=params)
 
 
-def get_new_media_for_old(old, new, media_service, keystring):
-    """ Returns a new media entity from an old keystring, or None if there is an issue.
-
-        Handles uploading to the new upload service, naming, etc.
+@log_and_retry()
+def get_old_media_entity(old, keystring):
+    """ Return old media info.
     """
-    # Fetch old media, extract relevant information
-    old_media = old.media(keystring).GET()
-    # TODO: Remove once video upload is working
-    if old_media["is_video"] == True:
-        logging.warning("Skipping media since video is not yet handled: {}".format(keystring))
-        return None
+    old_media = _remote_call(old.media(keystring).GET)
     filename = old_media["filename"]
     if not filename or "." not in filename:
         # Invalid filename, which is required in upload service
         mimetype = old_media["mime_type"]
         ext = mimetypes.guess_extension(mimetype)
         if ext:
-            filename = "photo" + ext
+            old_media["filename"] = "photo" + ext
         else:
             logging.error("skipping media due to unknown file type: {}".format(keystring))
             return None
-    # Transform to new schema
-    media_info = transform.media(old_media)
 
-    try:
-        # Upload to new upload service, and update the url
-        media_info["url"] = upload_media(media_service, filename, media_info["url"])
-    except HTTPError:
-        logging.warning("Skipping because image could not be fetched: {}".format(media_info["url"]))
+    return old_media
+
+
+def get_new_media_for_old(old, new, media_service, keystring):
+    """ Returns a new media entity from an old keystring, or None if there is an issue.
+
+        Handles uploading to the new upload service, naming, etc.
+    """
+    # Fetch old media, extract relevant information
+    old_media = get_old_media_entity(old, keystring)
+    if not old_media:
         return None
+    # Transform to new schema
+    media = transform.media(old_media)
 
-    # Create apiv2 media entity and return
-    media = load_resource(new, "media", media_info)
-    return media
+    if old_media["is_video"] == True:
+        pass
+    else:
+        try:
+            # Upload to new upload service, and update the url
+            media["url"] = upload_media(media_service, old_media["filename"], media["url"])
+        except HTTPError:
+            logging.warning("Skipping because image could not be fetched: {}".format(media["url"]))
+            return None
+    return load_resource(new, "media", media)
 
 
 def convert_organization_to_new_system(old, new, media_service, organization_keystring):

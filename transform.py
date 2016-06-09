@@ -45,6 +45,7 @@ def address(address_info):
     return clean_up_shit_nulls(data)
 
 
+# TODO: timestamps?
 def media(media_info):
     """ Transform v1 media into v2 media.
 
