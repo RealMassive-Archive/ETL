@@ -242,15 +242,19 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         if photo and "default_profile" not in photo:
             # NOTE: From API, we only have access to the URL, so cant use the convenience method
             filename = "photo.png"
-            media_info = {
-                "filename": filename,
-                "ip_status": "APPROVED",
-                "mime_type": "image/png",
-                "url": upload_media(media_service, filename, photo),
-                "user_approved": True,
-            }
-            media = load_resource(new, "media", media_info)
-
+            try:
+                photo_url = upload_media(media_service, filename, photo)
+                media_info = {
+                    "filename": filename,
+                    "ip_status": "APPROVED",
+                    "mime_type": "image/png",
+                    "url": photo_url,
+                    "user_approved": True,
+                }
+                media = load_resource(new, "media", media_info)
+            except:
+                media = None
+                logging.warning("Skipping because image could not be fetched: {}".format(photo))
             if media:
                 permission = transform.meta_relation(team, media, permission="admin")
                 load_resource(new, "permissions", permission)
