@@ -95,53 +95,22 @@ def social(social_info):
     }
     return clean_up_shit_nulls(data)
 
-################################
-# Metadata resource transforms #
-################################
+#####################
+# Metadata resource #
+#####################
 
+def meta_relation(resource1, resource2, **kwargs):
+    resource1 = {k:v for k,v in resource1.iteritems()}
+    resource1["data"].pop("attributes", None)
+    resource2 = {k:v for k,v in resource2.iteritems()}
+    resource2["data"].pop("attributes", None)
 
-def permission(resource, permission_level="admin"):
-    """ Restructure a v2 Media resource into an attachment.
-    """
-    resource_type = resource["data"]["type"]
-    resource["data"].pop("attributes")
-    return {
-        "data": {
-            "type": "permissions",
-            "attributes": {
-                "permission": permission_level,
-                resource_type: resource
-            }
-        }
+    attributes = {
+        resource1["data"]["type"]: resource1,
+        resource2["data"]["type"]: resource2,
     }
-
-
-def attachment(media, precedence=0.0):
-    """ Restructure a v2 Media resource into an attachment.
-    """
-    return {
-        "data": {
-            "type": "attachments",
-            "attributes": {
-                "precedence": precedence,
-                "media": media
-            }
-        }
-    }
-
-
-def team_member(team_member, membership="accepted"):
-    """ Restructure a v2 User resource into a team_member.
-    """
-    return {
-        "data": {
-            "type": "memberships",
-            "attributes": {
-                "membership": membership,
-                "users": team_member
-            }
-        }
-    }
+    attributes.update(kwargs)
+    return attributes
 
 
 #######################################################################
