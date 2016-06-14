@@ -270,7 +270,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
         new_building = transform.building_asset(building)
         new_building = load_resource(new, "buildings", new_building)
         permission = transform.meta_relation(team, new_building, permission="admin")
-        # TODO
+        load_resource(new, "permissions", permission)
         old_building_asset_map[building["key"]] = new_building["data"]["id"]
         # TODO: building listing?
         # TODO: building listing contacts?
