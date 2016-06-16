@@ -72,12 +72,7 @@ def upload_media(media_service, filename, url):
     # NOTE: hack around handling of files in authclient
     upload_url = media_service._path[0]
     upload_resp = requests.post(upload_url, files={"file": (filename, fetch_resp.content)})
-    # TODO: remove try/except once everyone is using new upload service
-    try:
-        new_url = str(media_service(upload_resp.json()["id"]))
-    except:
-        new_url = upload_resp.headers["location"]
-    return new_url
+    return upload_resp.json()
 
 
 #######################################################################
@@ -177,20 +172,21 @@ def get_new_media_for_old(old, new, media_service, keystring):
     media = transform.media(old_media)
 
     if old_media["is_video"] == True:
-        pass
+        media = load_resource(new, "media", media)
     else:
         if media.get("preview"):
             try:
                 media["preview"] = upload_media(media_service, "preview.jpe", media["preview"])
             except:
                 logging.warning("Skipping because image could not be fetched: {}".format(media["preview"]))
+                return None
         try:
             # Upload to new upload service, and update the url
-            media["url"] = upload_media(media_service, old_media["filename"], media["url"])
+            media = upload_media(media_service, old_media["filename"], media["url"])
         except HTTPError:
             logging.warning("Skipping because image could not be fetched: {}".format(media["url"]))
             return None
-    return load_resource(new, "media", media)
+    return media
 
 
 def convert_organization_to_new_system(old, new, media_service, organization_keystring):
@@ -243,15 +239,7 @@ def convert_organization_to_new_system(old, new, media_service, organization_key
             # NOTE: From API, we only have access to the URL, so cant use the convenience method
             filename = "photo.png"
             try:
-                photo_url = upload_media(media_service, filename, photo)
-                media_info = {
-                    "filename": filename,
-                    "ip_status": "APPROVED",
-                    "mime_type": "image/png",
-                    "url": photo_url,
-                    "user_approved": True,
-                }
-                media = load_resource(new, "media", media_info)
+                media = upload_media(media_service, filename, photo)
             except:
                 media = None
                 logging.warning("Skipping because image could not be fetched: {}".format(photo))
