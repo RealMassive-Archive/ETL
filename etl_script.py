@@ -71,7 +71,11 @@ def upload_media(media_service, filename, url):
     # Upload file
     # NOTE: hack around handling of files in authclient
     upload_url = media_service._path[0]
-    upload_resp = requests.post(upload_url, files={"file": (filename, fetch_resp.content)})
+    upload_resp = requests.post(
+        upload_url,
+        files={"file": (filename, fetch_resp.content)},
+        headers={"Authorization": "Bearer {}".format(media_service._requester.client.login()["access_token"])}
+    )
     return upload_resp.json()
 
 
