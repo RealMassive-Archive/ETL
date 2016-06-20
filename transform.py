@@ -17,15 +17,6 @@ def clean_up_shit_nulls(stuff, shit_nulls=None):
 
 def address(address_info):
     """ Transform v1 address to v2.
-
-        state = fields.String()
-        county = fields.String()
-        zipcode = fields.String()
-        street = fields.String()
-        address = fields.String()
-        full_state = fields.String()
-        geo_latitude = fields.Float()
-        geo_longitude = fields.Float()
     """
     data = {
 #        "address": None,
@@ -48,19 +39,6 @@ def address(address_info):
 # TODO: timestamps?
 def media(media_info):
     """ Transform v1 media into v2 media.
-
-        category = fields.String()
-        title = fields.String()
-        description = fields.String()
-        url = fields.String()
-        mime_type = fields.String()
-        preview = fields.String()
-        user_approved = fields.Boolean()
-        ip_status = fields.String()
-        height = fields.Integer()
-        width = fields.Integer()
-        video_tag = fields.String()
-        file_size = fields.String()
     """
     data = {
         "category": media_info.get("category"),
@@ -83,10 +61,6 @@ def media(media_info):
 
 def social(social_info):
     """ Transform v1 social_links to v2 social.
-
-        website = fields.String()
-        linkedin = fields.String()
-        twitter = fields.String()
     """
     data = {
         "website": social_info.get("webpage"),
@@ -119,13 +93,6 @@ def meta_relation(resource1, resource2, **kwargs):
 
 def space_asset(space_info):
     """ Transform v1 Space to v2 asset.
-
-        floor_number = fields.String()
-        max_contiguous = fields.Nested(AreaSchema)
-        min_divisible = fields.Nested(AreaSchema)
-        office_percentage = fields.Integer()
-        space_size = fields.Nested(AreaSchema)
-        unit_number = fields.String()
     """
     # Heading conversion
     data = {
@@ -175,19 +142,23 @@ def space_asset(space_info):
     return clean_up_shit_nulls(data)
 
 
-def space_rate(space_info):
-    """ Transform v1 rate info into v2 rate.
+def space_price(space_info):
+    """ Transform v1 space_info into v2 price.
+    """
+    data = {
+        "value": space_info.get("rate"),
+        "units": "usd"  # TODO: verify
+    }
+    if not data["value"]:
+        return {}
+    return data
 
-        rate = fields.Nested(CurrencySchema)
-        frequency = fields.String(); ["yearly", "monthly"]
-        type = fields.String(); ["full_service_gross", "industrial_gross", "modified_gross", "single_net", "double_net", "triple_net", "other"]
+
+def space_rate(space_info):
+    """ Transform v1 space_info into v2 rate.
     """
     # Heading conversion
     data = {
-        "rate": {
-            "value": space_info.get("rate"),
-            "units": "usd"
-        },
         "frequency": space_info.get("rate_frequency"),
         "type": space_info.get("rate_type")
     }
@@ -203,19 +174,14 @@ def space_rate(space_info):
 
 def space_lease(space_info):
     """ Transform v1 Space into v2 lease contract.
-
-        available_date = fields.Date()
-        rate = fields.Nested(RateSchema)
-        lease_term int4range not null
-        tenant_improvement = fields.String()
     """
     data = {
         "available_date": space_info.get("availability_date"),
+        "price": space_price(space_info),
         "rate": space_rate(space_info),
 #        "lease_term": space_info.get("lease_term"),  # TODO
         "tenant_improvement": space_info.get("ti")
     }
-
     if data["available_date"]:
         data["available_date"] = datetime.strptime(data["available_date"], "%Y-%m-%d").isoformat()
     return clean_up_shit_nulls(data)
@@ -223,11 +189,9 @@ def space_lease(space_info):
 
 def space_sublease(space_info):
     """ Transform v1 Space into v2 sublease contract.
-
-        rate = fields.Nested(RateSchema)
-        #TODO: sublease_availability tsrange not null
     """
     return {
+        "price": space_price(space_info),
         "rate": space_rate(space_info),
 #        "sublease_availability": space_info.get("expiration_data")  # TODO
     }
@@ -239,23 +203,6 @@ def space_sublease(space_info):
 
 def building_asset(building_info):
     """ Transform v1 Building to v2 building asset.
-
-        address = fields.Nested(AddressSchema)
-        air_conditioned = fields.Boolean()
-        building_size = fields.Nested(AreaSchema)
-        build_status = fields.String(); ["existing", "planned", "in_development"]
-        building_type = fields.String(); ["office", "retail", "flex", "industrial", "multifamily", "mixed"]
-        building_class = fields.String(); ["A", "B", "C"]
-        clear_height = fields.Nested(LengthSchema)
-        description = fields.String()
-        floor_count = fields.Integer()
-        leed_rating = fields.String(); ["none", "certified", "gold", "silver", "platinum"]
-        signage = fields.String()
-        sprinkler = fields.Boolean()
-        tenancy = fields.String(); ["multiple", "single"]
-        title = fields.String()
-        year_built = fields.Integer()
-        year_renovated = fields.Integer()
     """
     # Heading conversion
     data = {
@@ -359,8 +306,6 @@ def organization_organization(firm_data):
 
 def organization_team(firm_data):
     """ Transform v1 Organization to v2 Team.
-
-        name
     """
     return {"name": firm_data.get("name")}
 
@@ -371,19 +316,6 @@ def organization_team(firm_data):
 
 def user(user_data):
     """ Transform v1 User to v2 Contact.
-
-        bio = fields.String()
-        ccim_number = fields.String()
-        license_number = fields.String()
-        sior_member = fields.Boolean()
-        sior_number = fields.String()
-        title = fields.String()
-        email = fields.String()
-        first_name = fields.String()
-        last_name = fields.String()
-        mobile_phone = fields.String()
-        phone = fields.String()
-        social = fields.nested(SocialLinksSchema)
     """
     # Heading conversion
     data = {
