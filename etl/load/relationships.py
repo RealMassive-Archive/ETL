@@ -280,3 +280,4 @@ def entity_attachments(entity):
             )
             load_resource("permissions", resource("permissions", **permission_attrs))
             # TODO: user photo permissions for all related orgs
+

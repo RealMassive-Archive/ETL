@@ -38,21 +38,6 @@ def process_user(user):
         )
         relate_child_to_parent("users", user["data"]["id"], "cards", card)
 
-    # Photo
-    # TODO: figure out how frontend is handling `default_profile.jpg`. Is it expecting this to exist?
-    user_photo = user.get("photo")
-    if user_photo and user_photo != "/static/img/default_profile.jpg":
-        # Create media in apiv2
-        media_attrs = {"url": user_photo}
-        media = load_resource("media", resource("media", **media_attrs))
-        send_to_key_map(
-            v1_type="media",
-            v1_key=user_photo,
-            v1_urlsafe=user_photo,
-            v2_type="media",
-            v2_key=media["data"]["id"],
-        )
-
 
 def load_user(user):
     attrs = transform.user.user(user)
@@ -70,4 +55,23 @@ def load_card(user):
         logging.warning("Skipping card for {}".format(email))
         return None
     return load_resource("cards", resource("cards", **attrs))
+
+
+def load_photo(user):
+    """ Loads user photos into apiv2 Media.
+        To be run before any attachment steps
+    """
+    # Photo
+    user_photo = user.get("photo")
+    if user_photo and user_photo != "/static/img/default_profile.jpg":
+        # Create media in apiv2
+        media_attrs = {"url": user_photo}
+        media = load_resource("media", resource("media", **media_attrs))
+        send_to_key_map(
+            v1_type="media",
+            v1_key=user_photo,
+            v1_urlsafe=user_photo,
+            v2_type="media",
+            v2_key=media["data"]["id"],
+        )
 
