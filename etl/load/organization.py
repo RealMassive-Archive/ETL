@@ -25,14 +25,14 @@ def process_organization(organization):
     if organization.get("name") or organization.get("logo"):
         # Orgs with no logo AND no name are considered v2 irrelevant.
         # The rest are potentially user-facing and too risky to ignore
-        organization = load_organization(organization)
-        if organization:
+        new_organization = load_organization(organization)
+        if new_organization:
             send_to_key_map(
                 v1_type="organizations",
                 v1_key=organization["id"],
                 v1_urlsafe=organization["urlsafe"],
                 v2_type="organizations",
-                v2_key=organization["data"]["id"],
+                v2_key=new_organization["data"]["id"],
             )
 
 
