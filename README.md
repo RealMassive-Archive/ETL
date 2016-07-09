@@ -1,21 +1,21 @@
 # ETL
 ## Instructions
 1) Extract
-To extract data (retrieve all entities and pickle):
+To extract data (retrieve all entities and dump to \n delimited json):
 ```python
 # iPython shell in to the desired server you wish to extract from
-import datetime
-import pickle
+import json
 
 from etl import extract
 
 
-today = datetime.utcnow().date()
-
 for model in [Building, Space, Organization, User, Media]:
     model_name = model.__class__.__name__
-    all_ents = extract.get_entities(model)
-    pickle.dump(all_ents, open("{}-{}".format(model_name, today), "w"))
+    all_ents = []
+    for ents in extract.get_entities(model):
+        all_ents.extend(ents)
+    with open("{}.json".format(model_name), "w") as f:
+        f.write("\n".join(map(json.dumps, all_ents)))
 ```
 
 
@@ -29,10 +29,10 @@ for model in [Building, Space, Organization, User, Media]:
 from etl import load
 
 # Lists of entities from pickle
-all_buildings = [...]
-all_spaces = [...]
-all_organizations = [...]
-all_users = [...]
+all_buildings = map(json.loads, open("buildings.json").read().splitlines())
+all_spaces = map(json.loads, open("spaces.json").read().splitlines())
+all_organizations = map(json.loads, open("organizations.json").read().splitlines())
+all_users = map(json.loads, open("users.json").read().splitlines())
 
 # Base entities
 load.building.run(all_buildings)  # Loads all building assets
