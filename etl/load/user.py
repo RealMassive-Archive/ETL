@@ -23,7 +23,7 @@ def process_user(user):
         v1_key=old_user_id,
         v1_urlsafe=old_user_urlsafe,
         v2_type="users",
-        v2_key=user["data"]["id"],
+        v2_key=new_user["data"]["id"],
     )
 
     # Card
@@ -36,7 +36,7 @@ def process_user(user):
             v2_type="cards",
             v2_key=card["data"]["id"],
         )
-        relate_child_to_parent("users", user["data"]["id"], "cards", card)
+        relate_child_to_parent("users", new_user["data"]["id"], "cards", card)
 
 
 def load_user(user):
