@@ -3,3 +3,4 @@ git+ssh://github.com/RealMassive/rm-sdk-python.git@v0.3.1
 pyJWT==1.4.0
 requests==2.10.0
 retrying==1.3.3
+nose==1.3.7
