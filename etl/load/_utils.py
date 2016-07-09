@@ -1,9 +1,5 @@
 
-import json
-import requests
-from urlparse import urljoin
-
-from ..config import KEYMAP_ENDPOINT, media_sdk, sdk
+from ..config import KEYMAP, media_sdk, sdk
 
 
 def get_resource(resource_type, id_):
@@ -33,29 +29,13 @@ def relate_child_to_parent(parent_type, parent_id, child_type, child):
 def send_to_key_map(**kwargs):
     """ Send old:new key mapping to service.
     """
-    requests.post(
-        KEYMAP_ENDPOINT,
-        headers={"content-type": "application/json"},
-        data=json.dumps(dict(**kwargs)),
-        verify=False
-    )
+    KEYMAP.insert(**kwargs)
 
 
 def get_new_from_key_map(v1_type, v2_type, key):
     """ Return new, v2 key from old.
     """
-    response = requests.get(
-        urljoin(KEYMAP_ENDPOINT + "/", "{}/{}".format(v1_type, key))
-    )
-    results = response.json()["results"]
-    if not results:
-        return None
-
-    for res in results:
-        if res["v2_type"] == v2_type:
-            return res["v2_key"]
-
-    return None
+    return KEYMAP.get_new(v1_type, v2_type, key)
 
 
 def resource(resource_type, **resource_attributes):
