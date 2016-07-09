@@ -66,6 +66,7 @@ def sublease(space):
     """ Transform v1 Space into v2 sublease contract.
     """
     data = {
+        "archived": True if space.get("status") == "Archive" else False,
         "price": price(
             value=space.get("rate"),
             units="usd"
