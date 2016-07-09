@@ -1,5 +1,5 @@
-git+ssh://github.com/RealMassive/auth-client.git@master
-git+ssh://github.com/RealMassive/rm-sdk-python.git@v0.2.0
+git+ssh://github.com/RealMassive/auth-client.git@v2.0.0
+git+ssh://github.com/RealMassive/rm-sdk-python.git@v0.3.1
 pyJWT==1.4.0
 requests==2.10.0
 retrying==1.3.3
