@@ -1,4 +1,4 @@
-import csv
+import unicodecsv as csv
 
 
 class KeyMap(object):
@@ -18,5 +18,4 @@ class KeyMap(object):
         with open(out_file_path, 'wb') as f:
             writer = csv.writer(f)
             writer.writerow(('v1_key', 'v1_type', 'v1_urlsafe', 'v2_key', 'v2_type'))
-            for row in self.rows:
-                writer.writerow(row)
+            writer.writerows(self.rows)

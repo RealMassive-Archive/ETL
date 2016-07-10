@@ -1,5 +1,11 @@
 """ Helpers to convert apiv2 resources into their underlying csv format.
 """
+from collections import defaultdict
+
+import unicodecsv as csv
+
+from insta import Sequence, next_id
+
 
 csv_headers = {
     'attachments': ('category', 'id', 'precedence', 'deleted', 'created',
@@ -133,3 +139,26 @@ def flatten_resource(resource):
         to serialize v2 resources to csv.
     """
     return _flatten(resource['attributes'])
+
+
+class ApiV2(object):
+    def __init__(self):
+        self.seq = Sequence()
+        self.resources = defaultdict(list)
+
+    def next_id(self):
+        return next_id(self.seq)
+
+    def create_resource(self, resource):
+        flattened = flatten_resource(resource)
+        flattened['id'] = self.next_id()
+        self.resources[resource['type']].append(flattened)
+        return flattened['id']
+
+    def dump(self, resource_type, out_file_name):
+        with open(out_file_name, 'wb') as f:
+            header = csv_headers[resource_type]
+            writer = csv.DictWriter(f, header)
+            writer.writeheader()
+            rows = self.resources[resource_type]
+            writer.writerows(rows)
