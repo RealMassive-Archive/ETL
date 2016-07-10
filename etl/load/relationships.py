@@ -38,7 +38,6 @@ def entity_permission(v1_type, v2_type, entity, permission="admin"):
         {"data": {"type": v2_type, "id": new_entity_id}},
         permission=permission
     )
-
     return load_resource("permissions", resource("permissions", **permission_attrs))
 
 
