@@ -29,7 +29,7 @@ def entity_permission(v1_type, v2_type, entity, permission="admin"):
     if not old_organization_id:
         return
 
-    new_team_id = get_new_from_key_map("users", "teams", old_organization_id)
+    new_team_id = get_new_from_key_map("organizations", "teams", old_organization_id)
     if not new_team_id:
         return
 
