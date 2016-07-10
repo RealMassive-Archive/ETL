@@ -86,29 +86,25 @@ for organization in all_organizations:
 apiv2.dump_relationship('card', 'organization', '/tmp/card_organization.csv')
 print 'DONE'
 
-## =============
-## Untested land
-## =============
-
-## Spaces/listings Permissions
-#for space in all_spaces:
-    #load.relationships.entity_permission("spaces", "spaces", space, permission="admin")
-    #if space.space_type == "lease":
-        #load.relationships.entity_permission("spaces", "leases", space, permission="admin")
-    #elif space.space_type == "sublease":
-        #load.relationships.entity_permission("spaces", "subleases", space, permission="admin")
-
-## Building Permissions
-#for building in all_buildings:
-    #load.relationships.entity_permission("buildings", "buildings", building, permission="admin")
-
-## Organization Permissions
-#for organization in all_organizations:
-    #load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
-
 ## Media
 # load.media.run(all_media)  # Loads all media and metadata
 
 ## Attachments
 #for entity in all_buildings + all_spaces + all_organizations + all_users:
     #load.relationships.entity_attachments(entity)
+
+# Spaces/listings Permissions
+print 'dumping remaining permissions...'
+for space in all_spaces:
+    load.relationships.entity_permission("spaces", "spaces", space, permission="admin")
+    space_type = space.get("space_type")
+    if space_type not in ["lease", "sublease"]:
+        continue
+    load.relationships.entity_permission("spaces", space_type + "s", space, permission="admin")
+# Building Permissions
+for building in all_buildings:
+    load.relationships.entity_permission("buildings", "buildings", building, permission="admin")
+# Organization Permissions
+for organization in all_organizations:
+    load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
+apiv2.dump_resource("permissions", "/tmp/permission.csv")
