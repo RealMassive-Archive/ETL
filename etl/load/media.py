@@ -5,7 +5,6 @@ from .. import transform
 from ._utils import load_resource, media_sdk, resource, send_metadata, send_to_key_map
 
 
-# TODO: multiprocess
 def run(all_medias):
     for media in all_medias:
         process_media(media)

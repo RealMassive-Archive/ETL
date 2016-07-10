@@ -13,7 +13,7 @@ def building(building):
         "description": getattr(building, "description"),
         "floor_count": getattr(building, "floor_count"),
         "leed": getattr(building, "leed"),
-        "manager": key(getattr(building, "manager")),  # TODO
+        "manager": key(getattr(building, "manager")),
         "signage": getattr(building, "signage"),
         "size": getattr(building, "size"),
         "size_units": getattr(building, "size_units"),

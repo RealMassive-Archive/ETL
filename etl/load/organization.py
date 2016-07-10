@@ -3,7 +3,6 @@ from .. import transform
 from ._utils import load_resource, resource, send_to_key_map
 
 
-# TODO: multiprocess
 def run(all_organizations):
     for organization in all_organizations:
         process_organization(organization)

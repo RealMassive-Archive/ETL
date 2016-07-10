@@ -3,7 +3,6 @@ from .. import transform
 from ._utils import load_resource, relate_child_to_parent, resource, send_to_key_map
 
 
-# TODO: multiprocess
 def run(all_spaces):
     for space in all_spaces:
         process_space(space)
