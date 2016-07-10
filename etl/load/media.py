@@ -2,7 +2,8 @@
 import logging
 
 from .. import transform
-from ._utils import load_resource, media_sdk, resource, send_metadata, send_to_key_map
+from ..config import MEDIA_SERVICE_ENDPOINT
+from ._utils import load_resource, resource, send_metadata, send_to_key_map
 
 
 def run(all_medias):
@@ -30,7 +31,7 @@ def process_media(media):
     )
 
     # Create media in apiv2
-    new_media = load_media(media, str(media_sdk(metadata_id)))
+    new_media = load_media(media, MEDIA_SERVICE_ENDPOINT + "/{}".format(metadata_id))
     send_to_key_map(
         v1_type="media",
         v1_key=old_media_id,

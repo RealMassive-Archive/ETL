@@ -1,7 +1,7 @@
 
 from datetime import datetime
 
-from ..config import APIV2, KEYMAP, media_sdk
+from ..config import APIV2, KEYMAP, MEDIA_SERVICE
 
 
 def deletable():
@@ -17,9 +17,7 @@ def timestamp():
 
 
 def send_metadata(**attributes):
-    if "blobkey" in attributes:
-        attributes["blobkey"] = str(attributes["blobkey"])
-    return media_sdk("meta").POST(json=dict(attributes))
+    return MEDIA_SERVICE.insert(**attributes)
 
 
 def load_resource(resource_type, resource):

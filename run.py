@@ -92,12 +92,26 @@ for organization in all_organizations:
 apiv2.dump_relationship('card', 'organization', '/tmp/card_organization.csv')
 print 'DONE'
 
-## Media
-# load.media.run(all_media)  # Loads all media and metadata
+# media
+all_media = map(json.loads, data.extractfile('jsons/media.json').readlines())
+print 'dumping media...'
+load.media.run(all_media)  # Loads all media and metadata
+apiv2.dump_resource('media', '/tmp/media.csv')
+print 'DONE'
 
-## Attachments
-#for entity in all_buildings + all_spaces + all_organizations + all_users:
-    #load.relationships.entity_attachments(entity)
+# attachments
+print 'dumping attachments...'
+for entity in all_buildings + all_spaces + all_organizations + all_users:
+    load.relationships.entity_attachments(entity)
+apiv2.dump_resource('attachments', '/tmp/attachment.csv')
+apiv2.dump_relationship('attachment', 'building', '/tmp/attachment_building.csv')
+apiv2.dump_relationship('attachment', 'card', '/tmp/attachment_card.csv')
+apiv2.dump_relationship('attachment', 'lease', '/tmp/attachment_lease.csv')
+apiv2.dump_relationship('attachment', 'media', '/tmp/attachment_media.csv')
+apiv2.dump_relationship('attachment', 'organization', '/tmp/attachment_organization.csv')
+apiv2.dump_relationship('attachment', 'space', '/tmp/attachment_space.csv')
+apiv2.dump_relationship('attachment', 'sublease', '/tmp/attachment_sublease.csv')
+print 'DONE'
 
 # relate permissions to spaces, leases, subleases
 print 'dumping remaining permissions...'
@@ -123,6 +137,8 @@ apiv2.dump_relationship('contact', 'permission', '/tmp/contact_permission.csv')
 apiv2.dump_relationship('lease', 'permission', '/tmp/lease_permission.csv')
 apiv2.dump_relationship('membership', 'permission', '/tmp/membership_permission.csv')
 apiv2.dump_relationship('organization', 'permission', '/tmp/organization_permission.csv')
+apiv2.dump_relationship('media', 'permission', '/tmp/media_permission.csv')
+apiv2.dump_relationship('attachment', 'permission', '/tmp/attachment_permission.csv')
 apiv2.dump_relationship('permission', 'space', '/tmp/permission_space.csv')
 apiv2.dump_relationship('permission', 'sublease', '/tmp/permission_sublease.csv')
 apiv2.dump_relationship('permission', 'team', '/tmp/permission_team.csv')
