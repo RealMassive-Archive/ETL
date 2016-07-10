@@ -45,15 +45,18 @@ apiv2.dump_resource('users', '/tmp/user.csv')
 apiv2.dump_resource('cards', '/tmp/card.csv')
 print 'DONE'
 
+# create memberships and membership permissions
+print 'dumping memberships...'
+for user in all_users:
+    load.relationships.membership(user)
+apiv2.dump_resource('memberships', '/tmp/membership.csv')
+print 'DONE'
+
 ## =============
 ## Untested land
 ## =============
 
 # load.media.run(all_media)  # Loads all media and metadata
-
-# Create memberships and membership permissions
-#for user in all_users:
-    #load.relationships.membership(user)
 
 ## Relate space assets to buildings
 #for space in all_spaces:
