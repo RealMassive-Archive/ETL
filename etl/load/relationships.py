@@ -221,7 +221,7 @@ def entity_attachments(entity):
             return
         new_entity_id = get_new_from_key_map("spaces", new_entity_kind, old_entity_id)
         if entity.get("organization"):
-            new_team_id = get_new_from_key_map("organizations", "teams", entity["organizaton"])
+            new_team_id = get_new_from_key_map("organizations", "teams", entity.get("organizaton"))
         else:
             new_team_id = None
         attachments = entity.get("attachments", [])
@@ -236,12 +236,12 @@ def entity_attachments(entity):
         new_entity_kind = "cards"
         new_entity_id = get_new_from_key_map("users", new_entity_kind, old_entity_id)
         new_team_id = [get_new_from_key_map("organizations", "teams", key) for key in entity.get("organizations", [])]
-        attachments = [entity.photo]
+        attachments = [entity.get("photo")]
         category = "profile_upload"  # TODO: verify
 
     # Process attachments list
     for old_media_id in attachments:
-        if not attachment:
+        if not old_media_id:
             continue
 
         new_media_id = get_new_from_key_map("media", "media", old_media_id)
@@ -253,11 +253,17 @@ def entity_attachments(entity):
             category = get_new_from_key_map("media", "category", old_media_id)
 
         # Attachment
-        attachment_attrs = relationship_resource(
-            {"data": {"type": "media", "id": new_media_id}},
-            {"data": {"type": new_entity_kind, "id": new_entity_id}},
-            category=category  # TODO: make sure category=None wont fail marshmallow
-        )
+        if category:
+            attachment_attrs = relationship_resource(
+                {"data": {"type": "media", "id": new_media_id}},
+                {"data": {"type": new_entity_kind, "id": new_entity_id}},
+                category=category
+            )
+        else:
+            attachment_attrs = relationship_resource(
+                {"data": {"type": "media", "id": new_media_id}},
+                {"data": {"type": new_entity_kind, "id": new_entity_id}},
+            )
         attachment = load_resource("attachments", resource("attachments", **attachment_attrs))
 
         # Permissions
