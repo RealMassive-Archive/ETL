@@ -45,12 +45,18 @@ tables = [
     'permission_user'
 ]
 
-fmt = """COPY "{table}" FROM '/tmp/{table}.csv' DELIMITER ',' CSV HEADER;"""
+fmt = """COPY "{table}" ({columns}) FROM '/tmp/{table}.csv' DELIMITER ',' CSV HEADER;"""
+
+
+def dquote(s):
+    return '"{}"'.format(s)
+
 
 def generate_sql():
     statements = []
     for table in tables:
-        statements.append(fmt.format(table=table))
+        columns = ','.join(map(dquote, next(open('/tmp/{}.csv'.format(table))).strip().split(',')))
+        statements.append(fmt.format(table=table, columns=columns))
     return statements
 
 
