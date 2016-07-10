@@ -5,7 +5,6 @@ from .. import transform
 from ._utils import load_resource, relate_child_to_parent, resource, send_to_key_map
 
 
-# TODO: multiprocess
 def run(all_users):
     for user in all_users:
         process_user(user)

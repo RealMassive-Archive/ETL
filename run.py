@@ -81,7 +81,6 @@ print 'DONE'
 print 'dumping organization to lease and sublease relationships...'
 for space in all_spaces:
     load.relationships.listing_organization(space)
-# TODO: MUST create these relationships. Would expect them to be populated
 apiv2.dump_relationship('lease', 'organization', '/tmp/lease_organization.csv')
 apiv2.dump_relationship('organization', 'sublease', '/tmp/organization_sublease.csv')
 print 'DONE'

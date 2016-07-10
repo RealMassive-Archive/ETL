@@ -1,4 +1,6 @@
 
+import json
+
 from ._utils import clean_up_shit_nulls, deletable, timestamp
 
 
@@ -14,7 +16,7 @@ def media(media):
         "preview": media.get("preview_info"),
         "title": media.get("title"),
         "user_approved": media.get("approved"),
-#        "video_tag": media.get(""),  # TODO
+        "video_tag": json.dumps(media.get("video_tags", [])),
         "width": media.get("width"),
     }
     data.update(timestamp(media))

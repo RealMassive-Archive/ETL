@@ -18,7 +18,7 @@ def media(media):
         "title": getattr(media, "title"),
         "user_approved": getattr(media, "approved"),
         "width": getattr(media, "width"),
-#        "video_tag": getattr(media, ""),  # TODO
+        "video_tags": getattr(media, "video_tags"),
     }
     data.update(timestamp(media))
     data.update(identifiers(media))

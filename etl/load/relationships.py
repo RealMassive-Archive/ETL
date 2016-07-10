@@ -198,7 +198,6 @@ def organization_card(organization):
         relate_child_to_parent("organizations", new_organization_id, "cards", {"data": {"type": "cards", "id": new_card_id}})
 
 
-# consider using keymap for urll:v2-media
 def entity_attachments(entity):
     """ Create attachments for entities that
     """
@@ -236,7 +235,7 @@ def entity_attachments(entity):
     elif entity.get("class") == "User":
         new_entity_kind = "cards"
         new_entity_id = get_new_from_key_map("users", new_entity_kind, old_entity_id)
-        new_team_id = None   # TODO: who gets permission over a card's media/atachment
+        new_team_id = [get_new_from_key_map("organizations", "teams", key) for key in entity.get("organizations", [])]
         attachments = [entity.photo]
         category = "profile_upload"  # TODO: verify
 
@@ -262,7 +261,7 @@ def entity_attachments(entity):
         attachment = load_resource("attachments", resource("attachments", **attachment_attrs))
 
         # Permissions
-        if new_team_id:
+        if isinstance(new_team_id, (str, int)):
             # Permission (Media)
             permission_attrs = relationship_resource(
                     {"data": {"type": "teams", "id": new_team_id}},
@@ -278,5 +277,22 @@ def entity_attachments(entity):
                     permission="admin"
             )
             load_resource("permissions", resource("permissions", **permission_attrs))
-            # TODO: user photo permissions for all related orgs
+
+        elif isinstance(new_team_id, list):
+            for team_id in new_team_id:
+                # Permission (Media)
+                permission_attrs = relationship_resource(
+                        {"data": {"type": "teams", "id": team_id}},
+                        {"data": {"type": "media", "id": new_media_id}},
+                        permission="admin"
+                )
+                load_resource("permissions", resource("permissions", **permission_attrs))
+
+                # Permission (Attachment)
+                permission_attrs = relationship_resource(
+                        {"data": {"type": "teams", "id": team_id}},
+                        {"data": {"type": "attachments", "id": attachment["data"]["id"]}},
+                        permission="admin"
+                )
+                load_resource("permissions", resource("permissions", **permission_attrs))
 
