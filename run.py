@@ -13,6 +13,8 @@ logging.basicConfig(level=logging.CRITICAL)
 # load compressed data tar file
 data = tarfile.open('/tmp/data.tar.gz', 'r:gz')
 
+#TODO: created, updated, deleted, archived MUST be set for all resources
+
 # load buildings
 print 'dumping buildings...'
 all_buildings = map(json.loads, data.extractfile('jsons/buildings.json').readlines())
@@ -59,15 +61,22 @@ for space in all_spaces:
 apiv2.dump_relationship('building', 'space', '/tmp/building_space.csv')
 print 'DONE'
 
+# relate contacts to listings
+print 'dumping contact to lease and sublease relationships...'
+for space in all_spaces:
+    load.relationships.listing_contacts(space)
+apiv2.dump_resource('contacts', '/tmp/contact.csv')
+# TODO: MUST create these relationships manually since the api won't do it automatically
+#apiv2.dump_relationship('card', 'contact', '/tmp/card_contact.csv')
+#apiv2.dump_relationship('contact', 'lease', '/tmp/contact_lease.csv')
+#apiv2.dump_relationship('contact', 'sublease', '/tmp/contact_sublease.csv')
+print 'DONE'
+
 ## =============
 ## Untested land
 ## =============
 
 # load.media.run(all_media)  # Loads all media and metadata
-
-## Relate contacts to listings
-#for space in all_spaces:
-    #load.relationships.listing_contacts(space)
 
 ## Relate organizations to listings
 #for space in all_spaces:

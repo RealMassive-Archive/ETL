@@ -90,7 +90,7 @@ def listing_contacts(space):
             {"data": {"type": space_type, "id": new_listing_id}},
             precedence=float(i)
         )
-        contact = load_resource("contacts", resource("contacts", **contacts_attrs))
+        contact = load_resource("contacts", resource("contacts", **contact_attrs))
 
         if new_team_id:
             # Permission
