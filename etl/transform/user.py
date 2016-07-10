@@ -1,5 +1,5 @@
 
-from ._utils import clean_up_shit_nulls, timestamp
+from ._utils import clean_up_shit_nulls, deletable, timestamp
 from .social import social
 
 
@@ -8,6 +8,7 @@ def user(user_):
         "email": user_.get("email")
     }
     data.update(timestamp(user_))
+    data.update(deletable(user_))
     return clean_up_shit_nulls(data)
 
 
@@ -29,6 +30,7 @@ def card(user_):
         "title": user_.get("title")
     }
     data.update(timestamp(user_))
+    data.update(deletable(user_))
 
     # Value conversion
     if data["ccim_number"]:

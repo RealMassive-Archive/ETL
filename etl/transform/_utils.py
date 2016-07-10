@@ -1,4 +1,5 @@
 
+from datetime import datetime
 import logging
 
 
@@ -41,6 +42,10 @@ def daterange(value):
         "start": value,
         "end": None,
     }
+
+
+def deletable(entity):
+    return {"deleted": False}
 
 
 def intrange(value, units="months"):
@@ -94,7 +99,7 @@ def rate(frequency=None, type_=None):
 
 def timestamp(entity):
     return {
-        "created": entity.get("created_at"),
-        "updated": entity.get("edited_at")
+        "created": entity.get("created_at") or datetime.utcnow().isoformat(),
+        "updated": entity.get("edited_at") or datetime.utcnow().isoformat()
     }
 
