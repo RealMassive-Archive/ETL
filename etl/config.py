@@ -25,5 +25,4 @@ requester = AuthRequester(
     password=PASSWORD,
     config=AuthConfig
 )
-sdk = RealMassive(domain=ENDPOINT, requester=requester)
 media_sdk = RealMassive(domain=MEDIA_SERVICE_ENDPOINT, requester=requester)
