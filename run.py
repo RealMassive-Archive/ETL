@@ -67,9 +67,9 @@ for space in all_spaces:
     load.relationships.listing_contacts(space)
 apiv2.dump_resource('contacts', '/tmp/contact.csv')
 # TODO: MUST create these relationships manually since the api won't do it automatically
-#apiv2.dump_relationship('card', 'contact', '/tmp/card_contact.csv')
-#apiv2.dump_relationship('contact', 'lease', '/tmp/contact_lease.csv')
-#apiv2.dump_relationship('contact', 'sublease', '/tmp/contact_sublease.csv')
+apiv2.dump_relationship('card', 'contact', '/tmp/card_contact.csv')
+apiv2.dump_relationship('contact', 'lease', '/tmp/contact_lease.csv')
+apiv2.dump_relationship('contact', 'sublease', '/tmp/contact_sublease.csv')
 print 'DONE'
 
 # relate organizations to listings
@@ -77,8 +77,8 @@ print 'dumping organization to lease and sublease relationships...'
 for space in all_spaces:
     load.relationships.listing_organization(space)
 # TODO: MUST create these relationships. Would expect them to be populated
-#apiv2.dump_relationship('lease', 'organization', '/tmp/lease_organization.csv')
-#apiv2.dump_relationship('organization', 'sublease', '/tmp/organization_sublease.csv')
+apiv2.dump_relationship('lease', 'organization', '/tmp/lease_organization.csv')
+apiv2.dump_relationship('organization', 'sublease', '/tmp/organization_sublease.csv')
 print 'DONE'
 
 # relate card to organization

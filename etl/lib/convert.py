@@ -120,30 +120,8 @@ def _format_key(parent_key, child_key):
     return '_' + parent_key + '__' + type_ + '__' + child_key
 
 
-def _flatten(d):
-    new = {}
-    for k, v in d.iteritems():
-        if isinstance(v, dict):
-            if 'data' in v:
-                break
-            for ck, cv in v.iteritems():
-                key = _format_key(k, ck)
-                new[key] = cv
-        else:
-            new[k] = v
-    return new
-
-
-def flatten_resource(resource):
-    """ flatten v2 resource into dictionary compatible with csv.DictWriter
-
-        When used in conjunction with `csv_headers` above can be used to
-        to serialize v2 resources to csv.
-    """
-    return _flatten(resource['attributes'])
-
-
 class ApiV2(object):
+
     def __init__(self):
         self.seq = Sequence()
         self.resources = defaultdict(list)
@@ -153,8 +131,9 @@ class ApiV2(object):
         return next_id(self.seq)
 
     def create_resource(self, resource):
-        flattened = flatten_resource(resource)
-        flattened['id'] = self.next_id()
+        resource_id = self.next_id()
+        flattened = self._flatten_resource(resource, resource_id)
+        flattened['id'] = resource_id
         self.resources[resource['type']].append(flattened)
         return flattened['id']
 
@@ -184,3 +163,27 @@ class ApiV2(object):
             writer.writerow(header)
             rows = self.relationships[header]
             writer.writerows(rows)
+
+    def _flatten(self, d, parent_type, parent_id):
+        new = {}
+        for k, v in d.iteritems():
+            if isinstance(v, dict):
+                if 'data' in v:
+                    child_type = v['data']['type']
+                    child_id = v['data']['id']
+                    self.create_relationship(parent_type, parent_id, child_type, child_id)
+                    break
+                for ck, cv in v.iteritems():
+                    key = _format_key(k, ck)
+                    new[key] = cv
+            else:
+                new[k] = v
+        return new
+
+    def _flatten_resource(self, resource, resource_id):
+        """ flatten v2 resource into dictionary compatible with csv.DictWriter
+
+            When used in conjunction with `csv_headers` above can be used to
+            to serialize v2 resources to csv.
+        """
+        return self._flatten(resource['attributes'], resource['type'], resource_id)
