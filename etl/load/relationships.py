@@ -54,7 +54,7 @@ def building_space(space):
         return
 
     new_building_id = get_new_from_key_map("buildings", "buildings", old_building_id)
-    relate_child_to_parent("buildings", building, "spaces", {"data": {"type": "spaces", "id": new_space_id}})
+    relate_child_to_parent("buildings", new_building_id, "spaces", {"data": {"type": "spaces", "id": new_space_id}})
 
 
 def listing_contacts(space):

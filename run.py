@@ -52,15 +52,18 @@ for user in all_users:
 apiv2.dump_resource('memberships', '/tmp/membership.csv')
 print 'DONE'
 
+# relate spaces to buildings
+print 'dumping building space relationships...'
+for space in all_spaces:
+    load.relationships.building_space(space)
+apiv2.dump_relationship('building', 'space', '/tmp/building_space.csv')
+print 'DONE'
+
 ## =============
 ## Untested land
 ## =============
 
 # load.media.run(all_media)  # Loads all media and metadata
-
-## Relate space assets to buildings
-#for space in all_spaces:
-    #load.relationships.building_space(spaces)
 
 ## Relate contacts to listings
 #for space in all_spaces:
