@@ -124,6 +124,8 @@ def _flatten(d):
     new = {}
     for k, v in d.iteritems():
         if isinstance(v, dict):
+            if 'data' in v:
+                break
             for ck, cv in v.iteritems():
                 key = _format_key(k, ck)
                 new[key] = cv
