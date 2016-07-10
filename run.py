@@ -6,6 +6,8 @@ from etl import load
 from etl.config import APIV2 as apiv2
 from etl.config import KEYMAP as keymap
 
+from sql import generate_sql
+
 
 # disable log messages
 logging.basicConfig(level=logging.CRITICAL)
@@ -133,6 +135,10 @@ print 'dumping v1 to v2 key mappings...'
 keymap.dump('/tmp/keymap.csv')
 print 'DONE'
 
-# dump current sequence value
-print 'IMPORTANT: in production you will need to run the following command'
-print "ALTER SEQUENCE table_id_seq RESTART WITH {};".format(str(apiv2.seq.current))
+# dump sql to generate table
+print 'generating sql to load data in /tmp/load.sql'
+with open('/tmp/load.sql', 'w') as f:
+    statement = "ALTER SEQUENCE table_id_seq RESTART WITH {};".format(str(apiv2.seq.current))
+    statements = generate_sql()
+    statements.append(statement)
+    f.write('\n'.join(statements))
