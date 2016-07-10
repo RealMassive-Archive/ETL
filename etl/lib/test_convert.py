@@ -2,7 +2,7 @@ import os
 
 from datadiff.tools import assert_equal
 
-from convert import flatten_resource, ApiV2
+from convert import ApiV2
 
 
 resource = {
@@ -34,6 +34,8 @@ resource = {
 
 
 def test_flatten_resource():
+    apiv2 = ApiV2()
+
     expected = {
         'build_status': 'Existing',
         'updated': '2016-06-30T02:19:08.238321+00:00',
@@ -54,7 +56,7 @@ def test_flatten_resource():
         '_building_size__area__value': '12345.000000'
     }
 
-    actual = flatten_resource(resource)
+    actual = apiv2._flatten_resource(resource, resource_id=0)
 
     assert_equal(actual, expected)
 
