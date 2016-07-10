@@ -22,5 +22,5 @@ for model in [Building, Space, Organization, User, Media]:
 
 2) Transform
 ```
-pyton run.py
+python run.py
 ```
