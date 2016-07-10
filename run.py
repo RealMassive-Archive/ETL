@@ -45,6 +45,7 @@ all_users = map(json.loads, data.extractfile('jsons/users.json').readlines())
 load.user.run(all_users)  # loads all users and cards
 apiv2.dump_resource('users', '/tmp/user.csv')
 apiv2.dump_resource('cards', '/tmp/card.csv')
+apiv2.dump_relationship('card', 'user', '/tmp/card_user.csv')
 print 'DONE'
 
 # create memberships and membership permissions
