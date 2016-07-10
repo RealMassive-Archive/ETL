@@ -26,13 +26,19 @@ for model in [Building, Space, Organization, User, Media]:
 ```
 
 ```python
+import tarfile
+
 from etl import load
 
+
+# load data tar file
+data = tarfile.open('/tmp/data.tar.gz', 'r:gz')
+
 # Lists of entities from pickle
-all_buildings = map(json.loads, open("buildings.json").read().splitlines())
-all_spaces = map(json.loads, open("spaces.json").read().splitlines())
-all_organizations = map(json.loads, open("organizations.json").read().splitlines())
-all_users = map(json.loads, open("users.json").read().splitlines())
+all_buildings = map(json.loads, data.extractfile('jsons/buildings.json').readlines())
+all_spaces = map(json.loads, data.extractfile('jsons/spaces.json').readlines())
+all_organizations = map(json.loads, data.extractfile('jsons/organizations.json').readlines())
+all_users = map(json.loads, data.extractfile('jsons/users.json').readlines())
 
 # Base entities
 load.building.run(all_buildings)  # Loads all building assets
