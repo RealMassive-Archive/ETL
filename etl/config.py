@@ -2,10 +2,12 @@
 import os
 
 from lib.keymap import KeyMap
+from lib.convert import ApiV2
 
 from realmassive_sdk import AuthRequester, RealMassive
 
 
+APIV2 = ApiV2()
 KEYMAP = KeyMap()
 ENDPOINT = "http://localhost:5000"
 USER = "rm-svc-sdk-test@realmassive.com"

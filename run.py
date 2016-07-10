@@ -1,0 +1,92 @@
+import json
+import tarfile
+import logging
+
+from etl import load
+from etl.config import APIV2 as apiv2
+
+
+# disable log messages
+logging.basicConfig(level=logging.CRITICAL)
+
+
+# load compressed data tar file
+data = tarfile.open('/tmp/data.tar.gz', 'r:gz')
+
+# load buildings
+print 'dumping buildings...'
+all_buildings = map(json.loads, data.extractfile('jsons/buildings.json').readlines())
+load.building.run(all_buildings)  # loads all building assets
+apiv2.dump_resource('buildings', '/tmp/building.csv')
+print 'DONE'
+
+# load spaces
+print 'dumping spaces, leases, and subleases...'
+all_spaces = map(json.loads, data.extractfile('jsons/spaces.json').readlines())
+load.space.run(all_spaces)  # loads all space assets, leases and subleases
+apiv2.dump_resource('spaces', '/tmp/space.csv')
+apiv2.dump_resource('leases', '/tmp/lease.csv')
+apiv2.dump_resource('subleases', '/tmp/sublease.csv')
+print 'DONE'
+
+# load organizations
+print 'dumping organizations, and teams...'
+all_organizations = map(json.loads, data.extractfile('jsons/organizations.json').readlines())
+load.organization.run(all_organizations)  # loads all organizations and teams
+apiv2.dump_resource('organizations', '/tmp/organization.csv')
+apiv2.dump_resource('teams', '/tmp/team.csv')
+print 'DONE'
+
+# load users
+print 'dumping users, and cards...'
+all_users = map(json.loads, data.extractfile('jsons/users.json').readlines())
+load.user.run(all_users)  # loads all users and cards
+apiv2.dump_resource('users', '/tmp/user.csv')
+apiv2.dump_resource('cards', '/tmp/card.csv')
+print 'DONE'
+
+## =============
+## Untested land
+## =============
+
+# load.media.run(all_media)  # Loads all media and metadata
+
+# Create memberships and membership permissions
+#for user in all_users:
+    #load.relationships.membership(user)
+
+## Relate space assets to buildings
+#for space in all_spaces:
+    #load.relationships.building_space(spaces)
+
+## Relate contacts to listings
+#for space in all_spaces:
+    #load.relationships.listing_contacts(space)
+
+## Relate organizations to listings
+#for space in all_spaces:
+    #load.relationships.listing_organization(space)
+
+## Relate card to organization
+#for organization in all_organizations:
+    #load.relationships.organization_card(organization)
+
+## Spaces/listings Permissions
+#for space in all_spaces:
+    #load.relationships.entity_permission("spaces", "spaces", space, permission="admin")
+    #if space.space_type == "lease":
+        #load.relationships.entity_permission("spaces", "leases", space, permission="admin")
+    #elif space.space_type == "sublease":
+        #load.relationships.entity_permission("spaces", "subleases", space, permission="admin")
+
+## Building Permissions
+#for building in all_buildings:
+    #load.relationships.entity_permission("buildings", "buildings", building, permission="admin")
+
+## Organization Permissions
+#for organization in all_organizations:
+    #load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
+
+## Attachments
+#for entity in all_buildings + all_spaces + all_organizations + all_users:
+    #load.relationships.entity_attachments(entity)

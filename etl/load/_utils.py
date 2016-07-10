@@ -1,5 +1,5 @@
 
-from ..config import KEYMAP, media_sdk, sdk
+from ..config import APIV2, KEYMAP, media_sdk, sdk
 
 
 def get_resource(resource_type, id_):
@@ -17,13 +17,18 @@ def send_metadata(**attributes):
 def load_resource(resource_type, resource):
     """ POSTs a v2 resource.
     """
-    return sdk(resource_type).POST(json=resource)
+    # return sdk(resource_type).POST(json=resource)
+    id_ = APIV2.create_resource(resource['data'])
+    return {'data': {'id': id_, 'type': resource['data']['type']}}
 
 
 def relate_child_to_parent(parent_type, parent_id, child_type, child):
     """ Relate a resource to another resource.
     """
-    return sdk(parent_type)(parent_id)(child_type).POST(json=child)
+    # return sdk(parent_type)(parent_id)(child_type).POST(json=child)
+    child_id = int(child['data']['id'])
+    id_ = APIV2.create_relationship(parent_type, parent_id, child_type, child_id)
+    return id_
 
 
 def send_to_key_map(**kwargs):
