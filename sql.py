@@ -21,23 +21,23 @@ tables = [
     'membership_user',
     'lease_organization',
     'organization_sublease',
-    'media',
-    'attachment',
-    'attachment_building',
-    'attachment_card',
-    'attachment_lease',
-    'attachment_media',
-    'attachment_organization',
-    'attachment_space',
-    'attachment_sublease',
+#    'media',
+#    'attachment',
+#    'attachment_building',
+#    'attachment_card',
+#    'attachment_lease',
+#    'attachment_media',
+#    'attachment_organization',
+#    'attachment_space',
+#    'attachment_sublease',
     'permission',
     'building_permission',
     'card_permission',
     'contact_permission',
     'lease_permission',
     'membership_permission',
-    'media_permission',
-    'attachment_permission',
+#    'media_permission',
+#    'attachment_permission',
     'organization_permission',
     'permission_space',
     'permission_sublease',
@@ -45,7 +45,20 @@ tables = [
     'permission_user'
 ]
 
-fmt = """COPY "{table}" FROM '{table}.csv' DELIMITER ',' CSV HEADER;"""
+fmt = """COPY "{table}" ({columns}) FROM '/tmp/{table}.csv' DELIMITER ',' CSV HEADER;"""
 
-for table in tables:
-    print fmt.format(table=table)
+
+def dquote(s):
+    return '"{}"'.format(s)
+
+
+def generate_sql():
+    statements = []
+    for table in tables:
+        columns = ','.join(map(dquote, next(open('/tmp/{}.csv'.format(table))).strip().split(',')))
+        statements.append(fmt.format(table=table, columns=columns))
+    return statements
+
+
+if __name__ == '__main__':
+    print '\n'.join(generate_sql())
