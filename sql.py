@@ -45,7 +45,7 @@ tables = [
     'permission_user'
 ]
 
-fmt = """COPY {table} FROM '{table}.csv' DELIMITER ',' CSV HEADER;"""
+fmt = """COPY "{table}" FROM '{table}.csv' DELIMITER ',' CSV HEADER;"""
 
 for table in tables:
     print fmt.format(table=table)
