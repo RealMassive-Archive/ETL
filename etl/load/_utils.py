@@ -1,5 +1,19 @@
 
+from datetime import datetime
+
 from ..config import APIV2, KEYMAP, media_sdk, sdk
+
+
+def deletable():
+    return {"deleted": False}
+
+
+def timestamp():
+    now = datetime.utcnow().isoformat()
+    return {
+        "created": now,
+        "updated": now
+    }
 
 
 def get_resource(resource_type, id_):
@@ -72,5 +86,7 @@ def relationship_resource(resource1, resource2, **kwargs):
         resource2["data"]["type"]: resource2,
     }
     attributes.update(kwargs)
+    attributes.update(deletable())
+    attributes.update(timestamp())
     return attributes
 
