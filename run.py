@@ -4,6 +4,7 @@ import logging
 
 from etl import load
 from etl.config import APIV2 as apiv2
+from etl.config import KEYMAP as keymap
 
 
 # disable log messages
@@ -113,6 +114,7 @@ for building in all_buildings:
 # relate organization to permissions
 for organization in all_organizations:
     load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
+
 apiv2.dump_resource("permissions", "/tmp/permission.csv")
 apiv2.dump_relationship('building', 'permission', '/tmp/building_permission.csv')
 apiv2.dump_relationship('card', 'permission', '/tmp/card_permission.csv')
@@ -125,3 +127,12 @@ apiv2.dump_relationship('permission', 'sublease', '/tmp/permission_sublease.csv'
 apiv2.dump_relationship('permission', 'team', '/tmp/permission_team.csv')
 apiv2.dump_relationship('permission', 'user', '/tmp/permission_user.csv')
 print 'DONE'
+
+# dump key mappings
+print 'dumping v1 to v2 key mappings...'
+keymap.dump('/tmp/keymap.csv')
+print 'DONE'
+
+# dump current sequence value
+print 'IMPORTANT: in production you will need to run the following command'
+print "ALTER SEQUENCE table_id_seq RESTART WITH {};".format(str(apiv2.seq.current))
