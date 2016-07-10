@@ -172,10 +172,10 @@ class ApiV2(object):
                     child_type = v['data']['type']
                     child_id = v['data']['id']
                     self.create_relationship(parent_type, parent_id, child_type, child_id)
-                    break
-                for ck, cv in v.iteritems():
-                    key = _format_key(k, ck)
-                    new[key] = cv
+                else:
+                    for ck, cv in v.iteritems():
+                        key = _format_key(k, ck)
+                        new[key] = cv
             else:
                 new[k] = v
         return new

@@ -66,7 +66,6 @@ print 'dumping contact to lease and sublease relationships...'
 for space in all_spaces:
     load.relationships.listing_contacts(space)
 apiv2.dump_resource('contacts', '/tmp/contact.csv')
-# TODO: MUST create these relationships manually since the api won't do it automatically
 apiv2.dump_relationship('card', 'contact', '/tmp/card_contact.csv')
 apiv2.dump_relationship('contact', 'lease', '/tmp/contact_lease.csv')
 apiv2.dump_relationship('contact', 'sublease', '/tmp/contact_sublease.csv')
