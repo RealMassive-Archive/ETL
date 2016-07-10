@@ -64,5 +64,10 @@ def test_apiv2():
     apiv2.create_resource(resource)
     apiv2.create_resource(resource)
     outfile = '/tmp/building.csv'
-    apiv2.dump('buildings', outfile)
+    apiv2.dump_resource('buildings', outfile)
     assert os.path.exists(outfile)
+
+    apiv2.create_relationship('building', 10, 'spaces', 15)
+    outfile2 = '/tmp/building_space.csv'
+    apiv2.dump_relationship('building', 'space', outfile2)
+    assert os.path.exists(outfile2)

@@ -145,6 +145,7 @@ class ApiV2(object):
     def __init__(self):
         self.seq = Sequence()
         self.resources = defaultdict(list)
+        self.relationships = defaultdict(list)
 
     def next_id(self):
         return next_id(self.seq)
@@ -155,10 +156,29 @@ class ApiV2(object):
         self.resources[resource['type']].append(flattened)
         return flattened['id']
 
-    def dump(self, resource_type, out_file_name):
+    def create_relationship(self, parent_type, parent_id, child_type, child_id):
+        parent_type = parent_type.rstrip('s')
+        child_type = child_type.rstrip('s')
+        values = sorted([(parent_type, parent_id), (child_type, child_id)], key=lambda x: x[0])
+        key = tuple([v[0] for v in values])
+        values = tuple([v[1] for v in values])
+        self.relationships[key].append(values)
+        return child_id
+
+    def dump_resource(self, resource_type, out_file_name):
         with open(out_file_name, 'wb') as f:
             header = csv_headers[resource_type]
             writer = csv.DictWriter(f, header)
             writer.writeheader()
             rows = self.resources[resource_type]
+            writer.writerows(rows)
+
+    def dump_relationship(self, parent_type, child_type, out_file_name):
+        parent_type = parent_type.rstrip('s')
+        child_type = child_type.rstrip('s')
+        with open(out_file_name, 'wb') as f:
+            header = tuple(sorted([parent_type, child_type]))
+            writer = csv.writer(f)
+            writer.writerow(header)
+            rows = self.relationships[header]
             writer.writerows(rows)
