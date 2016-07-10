@@ -1,5 +1,5 @@
 
-from ._utils import area, clean_up_shit_nulls, length, timestamp
+from ._utils import area, clean_up_shit_nulls, deletable, length, timestamp
 from .address import address
 
 
@@ -34,6 +34,7 @@ def asset(building):
         "zoning": building.get("zoning"),
     }
     data.update(timestamp(building))
+    data.update(deletable(building))
 
     # Value conversions
     if data["build_status"]:

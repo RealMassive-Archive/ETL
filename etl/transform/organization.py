@@ -1,5 +1,5 @@
 
-from ._utils import clean_up_shit_nulls, timestamp
+from ._utils import clean_up_shit_nulls, deletable, timestamp
 from .address import address
 from .social import social
 
@@ -16,6 +16,7 @@ def organization(organization_):
         "social": social(organization_.get("social_links")),
     }
     data.update(timestamp(organization_))
+    data.update(deletable(organization_))
     return clean_up_shit_nulls(data)
 
 
@@ -26,5 +27,6 @@ def team(organization_):
         "name": organization_.get("name")
     }
     data.update(timestamp(organization_))
+    data.update(deletable(organization_))
     return clean_up_shit_nulls(data)
 

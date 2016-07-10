@@ -1,5 +1,5 @@
 
-from ._utils import area, clean_up_shit_nulls, daterange, intrange, price, rate, timestamp
+from ._utils import area, clean_up_shit_nulls, daterange, deletable, intrange, price, rate, timestamp
 
 
 def asset(space):
@@ -24,6 +24,7 @@ def asset(space):
         "unit_number": space.get("unit_number")
     }
     data.update(timestamp(space))
+    data.update(deletable(space))
 
     # Value conversion
     if not data["max_contiguous"]:
@@ -59,6 +60,7 @@ def lease(space):
         "tenant_improvement": space.get("ti")
     }
     data.update(timestamp(space))
+    data.update(deletable(space))
     return clean_up_shit_nulls(data)
 
 
@@ -78,5 +80,6 @@ def sublease(space):
         "sublease_availability": daterange(space.get("expiration_date"))
     }
     data.update(timestamp(space))
+    data.update(deletable(space))
     return clean_up_shit_nulls(data)
 

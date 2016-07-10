@@ -1,5 +1,5 @@
 
-from ._utils import clean_up_shit_nulls, timestamp
+from ._utils import clean_up_shit_nulls, deletable, timestamp
 
 
 def media(media):
@@ -18,6 +18,7 @@ def media(media):
         "width": media.get("width"),
     }
     data.update(timestamp(media))
+    data.update(deletable(media))
 
     if data["file_size"] is not None:
         data["file_size"] = str(data["file_size"])

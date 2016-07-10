@@ -13,8 +13,6 @@ logging.basicConfig(level=logging.CRITICAL)
 # load compressed data tar file
 data = tarfile.open('/tmp/data.tar.gz', 'r:gz')
 
-#TODO: created, updated, deleted, archived MUST be set for all resources
-
 # load buildings
 print 'dumping buildings...'
 all_buildings = map(json.loads, data.extractfile('jsons/buildings.json').readlines())
