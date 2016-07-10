@@ -4,6 +4,7 @@ import logging
 
 from etl import load
 from etl.config import APIV2 as apiv2
+from etl.config import KEYMAP as keymap
 
 
 # disable log messages
@@ -27,6 +28,8 @@ load.space.run(all_spaces)  # loads all space assets, leases and subleases
 apiv2.dump_resource('spaces', '/tmp/space.csv')
 apiv2.dump_resource('leases', '/tmp/lease.csv')
 apiv2.dump_resource('subleases', '/tmp/sublease.csv')
+apiv2.dump_relationship('lease', 'space', '/tmp/lease_space.csv')
+apiv2.dump_relationship('space', 'sublease', '/tmp/space_sublease.csv')
 print 'DONE'
 
 # load organizations
@@ -51,6 +54,8 @@ print 'dumping memberships...'
 for user in all_users:
     load.relationships.membership(user)
 apiv2.dump_resource('memberships', '/tmp/membership.csv')
+apiv2.dump_relationship('membership', 'team', '/tmp/membership_team.csv')
+apiv2.dump_relationship('membership', 'user', '/tmp/membership_user.csv')
 print 'DONE'
 
 # relate spaces to buildings
@@ -93,7 +98,7 @@ print 'DONE'
 #for entity in all_buildings + all_spaces + all_organizations + all_users:
     #load.relationships.entity_attachments(entity)
 
-# Spaces/listings Permissions
+# relate permissions to spaces, leases, subleases
 print 'dumping remaining permissions...'
 for space in all_spaces:
     load.relationships.entity_permission("spaces", "spaces", space, permission="admin")
@@ -101,10 +106,33 @@ for space in all_spaces:
     if space_type not in ["lease", "sublease"]:
         continue
     load.relationships.entity_permission("spaces", space_type + "s", space, permission="admin")
-# Building Permissions
+
+# relate building to permissions
 for building in all_buildings:
     load.relationships.entity_permission("buildings", "buildings", building, permission="admin")
-# Organization Permissions
+
+# relate organization to permissions
 for organization in all_organizations:
     load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
+
 apiv2.dump_resource("permissions", "/tmp/permission.csv")
+apiv2.dump_relationship('building', 'permission', '/tmp/building_permission.csv')
+apiv2.dump_relationship('card', 'permission', '/tmp/card_permission.csv')
+apiv2.dump_relationship('contact', 'permission', '/tmp/contact_permission.csv')
+apiv2.dump_relationship('lease', 'permission', '/tmp/lease_permission.csv')
+apiv2.dump_relationship('membership', 'permission', '/tmp/membership_permission.csv')
+apiv2.dump_relationship('organization', 'permission', '/tmp/organization_permission.csv')
+apiv2.dump_relationship('permission', 'space', '/tmp/permission_space.csv')
+apiv2.dump_relationship('permission', 'sublease', '/tmp/permission_sublease.csv')
+apiv2.dump_relationship('permission', 'team', '/tmp/permission_team.csv')
+apiv2.dump_relationship('permission', 'user', '/tmp/permission_user.csv')
+print 'DONE'
+
+# dump key mappings
+print 'dumping v1 to v2 key mappings...'
+keymap.dump('/tmp/keymap.csv')
+print 'DONE'
+
+# dump current sequence value
+print 'IMPORTANT: in production you will need to run the following command'
+print "ALTER SEQUENCE table_id_seq RESTART WITH {};".format(str(apiv2.seq.current))
