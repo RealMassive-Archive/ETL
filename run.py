@@ -5,6 +5,7 @@ import logging
 from etl import load
 from etl.config import APIV2 as apiv2
 from etl.config import KEYMAP as keymap
+from etl.config import MEDIA_SERVICE as mediaservice
 
 from sql import generate_sql
 
@@ -97,6 +98,7 @@ all_media = map(json.loads, data.extractfile('jsons/media.json').readlines())
 print 'dumping media...'
 load.media.run(all_media)  # Loads all media and metadata
 apiv2.dump_resource('media', '/tmp/media.csv')
+mediaservice.dump()
 print 'DONE'
 
 # attachments
