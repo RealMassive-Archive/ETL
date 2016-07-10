@@ -72,19 +72,25 @@ apiv2.dump_resource('contacts', '/tmp/contact.csv')
 #apiv2.dump_relationship('contact', 'sublease', '/tmp/contact_sublease.csv')
 print 'DONE'
 
+# relate organizations to listings
+print 'dumping organization to lease and sublease relationships...'
+for space in all_spaces:
+    load.relationships.listing_organization(space)
+# TODO: MUST create these relationships. Would expect them to be populated
+#apiv2.dump_relationship('lease', 'organization', '/tmp/lease_organization.csv')
+#apiv2.dump_relationship('organization', 'sublease', '/tmp/organization_sublease.csv')
+print 'DONE'
+
+# relate card to organization
+print 'dumping organization to card relationships...'
+for organization in all_organizations:
+    load.relationships.organization_card(organization)
+apiv2.dump_relationship('card', 'organization', '/tmp/card_organization.csv')
+print 'DONE'
+
 ## =============
 ## Untested land
 ## =============
-
-# load.media.run(all_media)  # Loads all media and metadata
-
-## Relate organizations to listings
-#for space in all_spaces:
-    #load.relationships.listing_organization(space)
-
-## Relate card to organization
-#for organization in all_organizations:
-    #load.relationships.organization_card(organization)
 
 ## Spaces/listings Permissions
 #for space in all_spaces:
@@ -101,6 +107,9 @@ print 'DONE'
 ## Organization Permissions
 #for organization in all_organizations:
     #load.relationships.entity_permission("organizations", "organizations", organization, permission="admin")
+
+## Media
+# load.media.run(all_media)  # Loads all media and metadata
 
 ## Attachments
 #for entity in all_buildings + all_spaces + all_organizations + all_users:
