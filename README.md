@@ -5,6 +5,7 @@
 To extract data (retrieve all entities and dump to \n delimited json):
 ```python
 # iPython shell in to the desired server you wish to extract from
+# NOTE: YOU MUST USE THE ETL BRANCH OF realmassive/realmassive git repo
 import json
 
 from etl import extract
