@@ -206,6 +206,8 @@ def entity_attachments(entity):
     if entity.get("class") in "Building":
         new_entity_kind = "buildings"
         new_entity_id = get_new_from_key_map("buildings", new_entity_kind, old_entity_id)
+        if not new_entity_id:
+            return
         if entity.get("manager"):
             new_team_id = get_new_from_key_map("organizations", "teams", entity["manager"])
         else:
@@ -220,6 +222,8 @@ def entity_attachments(entity):
         else:
             return
         new_entity_id = get_new_from_key_map("spaces", new_entity_kind, old_entity_id)
+        if not new_entity_id:
+            return
         if entity.get("organization"):
             new_team_id = get_new_from_key_map("organizations", "teams", entity.get("organizaton"))
         else:
@@ -229,12 +233,16 @@ def entity_attachments(entity):
     elif entity.get("class") == "Organization":
         new_entity_kind = "organizations"
         new_entity_id = get_new_from_key_map("organizations", new_entity_kind, old_entity_id)
+        if not new_entity_id:
+            return
         new_team_id = get_new_from_key_map("organizations", "teams", entity["id"])
         attachments = [entity.get("logo")]
         category = "logo"  # TODO: verify
     elif entity.get("class") == "User":
         new_entity_kind = "cards"
         new_entity_id = get_new_from_key_map("users", new_entity_kind, old_entity_id)
+        if not new_entity_id:
+            return
         new_team_id = [get_new_from_key_map("organizations", "teams", key) for key in entity.get("organizations", [])]
         attachments = [entity.get("photo")]
         category = "profile_upload"  # TODO: verify
