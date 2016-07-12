@@ -2,7 +2,7 @@
 import logging
 
 from .. import transform
-from ._utils import load_resource, relate_child_to_parent, resource, send_to_key_map
+from ._utils import get_new_from_key_map, load_resource, relate_child_to_parent, resource, send_to_key_map
 
 
 def run(all_users):
@@ -60,6 +60,13 @@ def load_photo(user):
     """ Loads user photos into apiv2 Media.
         To be run before any attachment steps
     """
+    old_user_id = user["id"]
+
+    new_card_id = get_new_from_key_map("users", "cards", old_user_id)
+    if not new_card_id:
+        # Only ingest user photo if there's a card to which it belongs
+        return
+
     # Photo
     user_photo = user.get("photo")
     if user_photo and user_photo != "/static/img/default_profile.jpg":

@@ -97,6 +97,9 @@ print 'DONE'
 all_media = map(json.loads, data.extractfile('jsons/media.json').readlines())
 print 'dumping media...'
 load.media.run(all_media)  # Loads all media and metadata
+# user photo
+for user in all_users:
+    load.user.load_photo(user)
 apiv2.dump_resource('media', '/tmp/media.csv')
 mediaservice.dump()
 print 'DONE'
