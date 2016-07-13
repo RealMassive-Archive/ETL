@@ -14,6 +14,7 @@ def building(building):
         "floor_count": getattr(building, "floor_count"),
         "leed": getattr(building, "leed"),
         "manager": key(getattr(building, "manager")),
+        "operating_expenses": getattr(building, "operating_expenses"),
         "signage": getattr(building, "signage"),
         "size": getattr(building, "size"),
         "size_units": getattr(building, "size_units"),

@@ -25,6 +25,7 @@ def asset(building):
         "description": building.get("description"),
         "floor_count": building.get("floor_count"),
         "leed_rating": building.get("leed"),
+        "opex": building.get("operating_expenses"),
         "signage": building.get("signage"),
         "sprinkler": building.get("sprinkler"),
         "tenancy": building.get("tenancy"),
