@@ -20,7 +20,8 @@ csv_headers = {
         '_building_size__area__value', 'building_subtype', 'building_type',
         '_clear_height__length__units', '_clear_height__length__value',
         'description', 'floor_count', 'leed_rating', '_lot_size__area__units',
-        '_lot_size__area__value', 'signage', 'sprinkler', 'tenancy', 'title',
+        '_lot_size__area__value', '_opex__currency__units',
+        '_opex__currency__value', 'signage', 'sprinkler', 'tenancy', 'title',
         'year_built', 'year_renovated', 'zoning', 'deleted', 'created',
         'updated'),
 
