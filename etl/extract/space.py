@@ -25,11 +25,15 @@ def space(space):
     data.update({
         "attachments": map(lambda x: key(x), space.attachments)
     })
+    organization = space.get_organization()
+    data["organization"] = key(organization.key) if organization else None
     data.update({
         "contacts": map(lambda x: key(x), space.contacts)
     })
-    organization = space.get_organization()
-    data["organization"] = key(organization.key) if organization else None
-
+    building = space.building and space.building.get()
+    if building:
+        data["contacts"].extend(
+            map(lambda x: key(x), building.contacts)
+        )
     return data
 
