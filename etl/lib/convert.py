@@ -96,6 +96,8 @@ csv_headers = {
 def _infer_type(parent_key):
     if parent_key.endswith('size'):
         return 'area'
+    elif parent_key == 'opex':
+        return 'currency'
     elif parent_key == 'price':
         return 'currency'
     elif parent_key == 'clear_height':
