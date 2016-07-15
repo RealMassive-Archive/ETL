@@ -1,5 +1,5 @@
 
-from ._utils import area, clean_up_shit_nulls, deletable, length, timestamp
+from ._utils import area, clean_up_shit_nulls, deletable, length, timestamp, price
 from .address import address
 
 
@@ -25,7 +25,7 @@ def asset(building):
         "description": building.get("description"),
         "floor_count": building.get("floor_count"),
         "leed_rating": building.get("leed"),
-        "opex": building.get("operating_expenses"),
+        "opex": price(building.get("operating_expenses")),
         "signage": building.get("signage"),
         "sprinkler": building.get("sprinkler"),
         "tenancy": building.get("tenancy"),
