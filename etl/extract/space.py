@@ -5,6 +5,7 @@ from ._utils import date, identifiers, key, timestamp
 def space(space):
     data = {
         "availability_date": date(getattr(space, "availability_date")),
+        "description": getattr(space, "description"),
         "building": key(getattr(space, "building")),
         "expiration_date": date(getattr(space, "expiration_date")),
         "floor_number": getattr(space, "floor_number"),

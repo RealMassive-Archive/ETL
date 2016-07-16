@@ -7,6 +7,7 @@ def asset(space):
     """
     # Heading conversion
     data = {
+        "description": space.get("description"),
         "floor_number": space.get("floor_number"),
         "max_contiguous": area(
             value=space.get("max_contiguous"),
