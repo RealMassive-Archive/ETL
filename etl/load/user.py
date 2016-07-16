@@ -2,7 +2,7 @@
 import logging
 
 from .. import transform
-from ._utils import get_new_from_key_map, load_resource, relate_child_to_parent, resource, send_to_key_map
+from ._utils import get_new_from_key_map, load_resource, relate_child_to_parent, resource, send_to_key_map, timestamp
 
 
 def run(all_users):
@@ -71,7 +71,10 @@ def load_photo(user):
     user_photo = user.get("photo")
     if user_photo and user_photo != "/static/img/default_profile.jpg":
         # Create media in apiv2
-        media_attrs = {"url": user_photo}
+        media_attrs = {
+	    "url": user_photo,
+	}
+	media_attrs.update(timestamp())
         media = load_resource("media", resource("media", **media_attrs))
         send_to_key_map(
             v1_type="media",
