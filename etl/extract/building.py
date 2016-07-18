@@ -1,6 +1,6 @@
 
 from .address import address
-from _utils import identifiers, key, timestamp
+from _utils import identifiers, key, timestamp, urlsafe
 
 
 def building(building):
@@ -34,4 +34,7 @@ def building(building):
     data.update({
         "contacts": map(lambda x: key(x), getattr(building, "contacts", []))
     })
+    brochure = building.get_brochure()
+    if brochure:
+        data.update({"brochure": urlsafe(brochure.key)})
     return data
