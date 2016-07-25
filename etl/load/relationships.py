@@ -212,7 +212,7 @@ def entity_attachments(entity):
             new_team_id = get_new_from_key_map("organizations", "teams", entity["manager"])
         else:
             new_team_id = None
-        attachments = entity.get("attachments", [])
+        attachments = filter(None, entity.get("attachments", []) + [entity.get("brochure", None)])
         category = None
     elif entity.get("class") in "Space":
         if entity.get("space_type") == "lease":
@@ -228,7 +228,7 @@ def entity_attachments(entity):
             new_team_id = get_new_from_key_map("organizations", "teams", entity.get("organizaton"))
         else:
             new_team_id = None
-        attachments = entity.get("attachments", [])
+        attachments = filter(None, entity.get("attachments", []) + [entity.get("brochure", None)])
         category = None
     elif entity.get("class") == "Organization":
         new_entity_kind = "organizations"

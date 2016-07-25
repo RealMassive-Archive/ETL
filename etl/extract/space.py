@@ -1,12 +1,12 @@
 
-from ._utils import date, identifiers, key, timestamp
+from ._utils import date, identifiers, key, timestamp, urlsafe
 
 
 def space(space):
     data = {
         "availability_date": date(getattr(space, "availability_date")),
-        "description": getattr(space, "description"),
         "building": key(getattr(space, "building")),
+        "description": getattr(space, "description"),
         "expiration_date": date(getattr(space, "expiration_date")),
         "floor_number": getattr(space, "floor_number"),
         "max_contiguous": getattr(space, "max_contiguous"),
@@ -36,5 +36,9 @@ def space(space):
         data["contacts"].extend(
             map(lambda x: key(x), building.contacts)
         )
+
+    brochure = space.get_brochure()
+    if brochure:
+        data.update({"brochure": urlsafe(brochure.key)})
     return data
 
